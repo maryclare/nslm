@@ -1,6 +1,6 @@
 pacf.ar <- function(pa) {
 
-  if (!(length(pa) == 1 & !pa[1] == 0)) {
+  if (!(length(pa) == 1 & pa[1] == 0)) {
   p <- length(pa)
   yk <- pa[1]
   for (k in 2:p) {
@@ -14,7 +14,7 @@ pacf.ar <- function(pa) {
 
 ar.pacf <- function(phi) {
 
-  if (!(length(phi) == 1 & !phi[1] == 0)) {
+  if (!(length(phi) == 1 & phi[1] == 0)) {
   p <- length(phi)
   y <- phi
   yk <- y
