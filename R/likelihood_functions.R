@@ -1,34 +1,40 @@
 pacf.ar <- function(pa) {
-
-  if (!(length(pa) == 1 & pa[1] == 0)) {
   p <- length(pa)
-  yk <- pa[1]
-  for (k in 2:p) {
-    yk <- c(yk - pa[k]*rev(yk), pa[k])
-  }
-  return(yk)
-  } else {
+  if (p == 0) {
     return(0)
+  } else if (p == 1) {
+    return(pa)
+  } else {
+    yk <- pa[1]
+    for (k in 2:p) {
+      yk <- c(yk - pa[k]*rev(yk), pa[k])
+    }
+    return(yk)
   }
 }
 
 ar.pacf <- function(phi) {
 
-  if (!(length(phi) == 1 & phi[1] == 0)) {
-  p <- length(phi)
-  y <- phi
-  yk <- y
-  pa <- numeric(p)
-  for (k in (p + 1):2) {
 
-    pa[k - 1] <- yk[k - 1]
+    p <- length(phi)
+    if (p == 0) {
+      return(0)
+    } else {
+    y <- phi
+    yk <- y
+    pa <- numeric(p)
+    for (k in (p + 1):2) {
 
-    yk <- (yk[-(k - 1)] + yk[k - 1]*rev(yk[-(k - 1)]))/(1 - yk[k - 1]^2)
+      pa[k - 1] <- yk[k - 1]
 
-  }
-  return(pa)
-  } else {
-    return(0)
+      if (abs(yk[k - 1]) == 1) {
+        break
+      } else {
+        yk <- (yk[-(k - 1)] + yk[k - 1]*rev(yk[-(k - 1)]))/(1 - yk[k - 1]^2)
+      }
+
+    }
+    return(pa)
   }
 
 }
@@ -78,83 +84,6 @@ adj.durbin <- function(Z, r) {
   }
   return(list("E" = E, "lbeta.sum" = lbeta.sum))
 }
-
-# Function that gives conditional means and variances for likelihood computation,
-# uses the Durbin-Levinson algorithm
-solve.dl <- function(cov.fun, z) {
-  n <- length(cov.fun)
-  C <- matrix(0, nrow = n, ncol = n)
-  m <- v <- rep(NA, n)
-  gamma.x.0 <- cov.fun[1]
-  m[1] <- 0
-  C[1 + 1, 1] <- cov.fun[2]/gamma.x.0
-  m[2] <- C[2, 1]*z[1]
-  v[1] <- gamma.x.0
-  v[2] <- v[1]*(1 - C[1 + 1, 1]^2)
-  for (i in 2:(n - 1)) {
-    C[1 + i, i] <- cov.fun[i + 1]
-    for (j in 1:(i - 1)) {
-      C[1 + i, i] <- C[1 + i, i] - C[1 + i-1, j]*cov.fun[abs(i - j) + 1]
-    }
-    C[1 + i, i] <- C[1 + i, i]/v[i]
-    for (j in (i-1):1) {
-      C[1 + i, j] <- C[1 + i - 1, j] - C[1 + i, i]*C[1 + i - 1, i - j]
-    }
-    m[1 + i] <- sum(C[1 + i, 1:i]*z[i:1])
-    if (i < n) {
-      v[i + 1] <- v[i]*(1 - C[1 + i, i]^2)
-    }
-  }
-
-  return(list("m"=m,
-              "v" = v,
-              "C" = C))
-}
-
-# Function that returns Whittle approximation to ll
-whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0) {
-
-  n <- length(z)
-  m <- floor((n - 1)/2)
-  if (!is.null(Covar)) {
-    z <- lm(z~Covar-1)$residuals
-  }
-  z <- (z - mean(z))/sd(z)
-  periodogram <- (Mod(fft(z))^2/(2*pi*n))[1:(n%/%2 + 1)]
-  per <- periodogram[2:(m + 1)]
-
-  frs <- (2*pi/n)*(1:m)
-
-  far <- fma <- rep(1, m)
-  p <- length(phi)
-  q <- length(theta)
-  if (!(sum(phi == 0) == p)) {
-
-    cosar <- cos(cbind(frs)%*%rbind(1:p))
-    sinar <- sin(cbind(frs)%*%rbind(1:p))
-    Rar <- cosar%*%phi
-    Iar <- sinar%*%phi
-    far <- (1 - Rar)^2 + Iar^2
-
-  }
-  if (!(sum(theta == 0) == q)) {
-
-    cosma <- cos(cbind(frs)%*%rbind(1:q))
-    sinma <- sin(cbind(frs)%*%rbind(1:q))
-    Rma <- cosma%*%theta
-    Ima <- sinma%*%theta
-    fma <- (1 - Rma)^2 + Ima^2
-
-  }
-
-  fsp <- (fma/far)*sqrt((1 - cos(frs))^2 + sin(frs)^2)^(-2*dfrac)
-  fsp <- (fma/far)*abs(2*sin(frs/2))^(-2*dfrac)
-
-  logl <- -(sum(per/fsp)*(4*pi/n))
-  # logl <- -(2*n*log(2*pi) + sum(log(fsp) + per/fsp))/n
-  return(logl)
-}
-
 
 # for specified arguments ks
 fi.cv <- function(ks, d) {
@@ -336,9 +265,9 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
             if (is.na(hgfs[hs == hv, j])) {
               if (!is.na(hgfs[hs == (hv - 1), j]) & count1[j] <= max.eval[j]) {
                 hgfs[hs == hv, j] <- hyperg.rec(a = d + hv,
-                                             c = 1 - d + hv,
-                                             rho = inv.root[j],
-                                             prev = hgfs[hs == (hv - 1), j])
+                                                c = 1 - d + hv,
+                                                rho = inv.root[j],
+                                                prev = hgfs[hs == (hv - 1), j])
                 count1[j] <- count1[j] + 1
               } else {
 
@@ -350,14 +279,14 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
             if (is.na(hgfs[hs == -hv, j])) {
               if (!is.na(hgfs[hs == (- hv + 1), j]) & count2[j] <= max.eval[j]) {
                 hgfs[hs == -hv, j] <- hyperg.pre(a = d - hv + 1,
-                                              c = 1 - d - hv + 1,
-                                              rho = inv.root[j],
-                                              succ = hgfs[hs == (- hv + 1), j])
+                                                 c = 1 - d - hv + 1,
+                                                 rho = inv.root[j],
+                                                 succ = hgfs[hs == (- hv + 1), j])
                 count2[j] <- count2[j] + 1
-          } else {
+              } else {
                 hgfs[hs == -hv, j] <- hyperg(d - hv, 1 - d - hv, inv.root[j])
                 count2[j] <- 0
-          }
+              }
             }
 
             hg1 <- hgfs[hs == hv, j]
@@ -395,12 +324,20 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
                      whi = FALSE, exact = TRUE, just.logl = TRUE) {
   if (whi) {
-    logl <- whi.ll(z = z, theta = theta, dfrac = dfrac, Covar = Covar, phi = phi)
+    logl <- whi.ll(z = z, theta = theta, dfrac = dfrac, Covar = Covar, phi = phi,
+                   just.logl = just.logl)
+
+    if (just.logl) {
+      return(logl)
+    } else {
+      return(list("logl" = logl$logl, "sse" = logl$sse, "beta" = logl$beta,
+                  "fitted" = logl$fitted))
+    }
   } else {
 
     n <- length(z)
     acv <- arfima.acv(lag.max = n - 1, d = dfrac, theta = theta,
-                    phi = phi, corr = TRUE)
+                      phi = phi, corr = TRUE)
     r <- acv$r
     # r <- tacvfARFIMA(phi = phi, theta = -theta, dfrac = dfrac, maxlag = n - 1)
     # r <- r/r[1]
@@ -423,7 +360,6 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     }
     logl <- -ad$lbeta.sum/(2*n) - log(sse/n)/2
 
-  }
   if (just.logl) {
     return(logl)
   } else {
@@ -435,14 +371,80 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     return(list("logl" = logl, "sse" = sse/(n*acv$var), "beta" = beta,
                 "fitted" = fitted))
   }
+  }
 }
+
+# Function that returns Whittle approximation to ll
+whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
+                    just.logl = TRUE) {
+
+  n <- length(z)
+  m <- floor((n - 1)/2)
+  if (!is.null(Covar)) {
+    linmod <- lm(z~Covar-1)
+    z <- linmod$residuals
+    fitted <- linmod$fitted
+    beta <- linmod$coef
+    sse <- summary(linmod)$sigma^2
+  } else {
+    fitted <- mean(z)
+    sse <- var(z)
+    z <- (z - mean(z))/sd(z)
+    beta <- NULL
+  }
+  periodogram <- (Mod(fft(z))^2/(2*pi*n))[1:(n%/%2 + 1)]
+  per <- periodogram[2:(m + 1)]
+
+  frs <- (2*pi/n)*(1:m)
+
+  far <- fma <- rep(1, m)
+  p <- length(phi)
+  q <- length(theta)
+  if (!(sum(phi == 0) == p)) {
+
+    cosar <- cos(cbind(frs)%*%rbind(1:p))
+    sinar <- sin(cbind(frs)%*%rbind(1:p))
+    Rar <- cosar%*%phi
+    Iar <- sinar%*%phi
+    far <- (1 - Rar)^2 + Iar^2
+
+  }
+  if (!(sum(theta == 0) == q)) {
+
+    cosma <- cos(cbind(frs)%*%rbind(1:q))
+    sinma <- sin(cbind(frs)%*%rbind(1:q))
+    Rma <- cosma%*%(-theta)
+    Ima <- sinma%*%(-theta)
+    fma <- (1 - Rma)^2 + Ima^2
+
+  }
+
+  fsp <- (fma/far)*sqrt((1 - cos(frs))^2 + sin(frs)^2)^(-2*dfrac)
+
+  logl <- -(sum(per/fsp)*(4*pi/n))
+  logl <- -2*(1/(2*pi))*sum(log(fsp)*2*pi/m + 2*pi*per/(fsp*m))
+  logl <- -sum(log(fsp) + per/fsp)
+  if (just.logl) {
+    return(logl)
+  } else {
+    if (!is.null(Covar)) {
+      fitted <- linmod$fitted
+    } else {
+      fitted <- rep(0, length(z))
+    }
+    return(list("logl" = logl, "sse" = sse, "beta" = beta,
+                "fitted" = fitted))
+  }
+}
+
 
 # Function that takes a value of the fractional differencing parameter d and a time series x
 # and returns the log likelihood,
 #' @export
 fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          whi = FALSE,
-                         just.logl = TRUE) {
+                         just.logl = TRUE,
+                         tr = TRUE) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -457,13 +459,19 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
     theta <- matrix(0, nrow = 1, ncol = k)
   }
   if (p > 0) {
-    phi <- matrix(pacf.ar(pars[1 + k*q + 1:(p*k)]), nrow = p, ncol = k)
+    if (tr) { # I don't think this will work correctly with k > 1 as written
+      phi <- matrix(pacf.ar(pars[1 + k*q + 1:(p*k)]), nrow = p, ncol = k)
+    } else {
+      phi <-  matrix(pars[1 + k*q + 1:(p*k)], nrow = p, ncol = k)
+    }
   } else {
     phi <- matrix(0, nrow = 1, ncol = k)
   }
   lls <- numeric(k)
   if (!just.logl) {
-    betas <- matrix(NA, nrow = ncol(Covar), ncol = k)
+    if (!is.null(Covar)) {
+      betas <- matrix(NA, nrow = ncol(Covar), ncol = k)
+    }
     fits <- matrix(NA, nrow = nrow(y), ncol = k)
     sses <- numeric(k)
     thetas <- vector("list", length = k)
@@ -623,10 +631,10 @@ fima.ll.auto.donly <- function(pars, y, d.max = 1.5, Covar = NULL, ar = NULL, ma
 
 fima.ll.auto.armaonly <- function(pars, y, d.max = 1.5, Covar = NULL, d,
                                   p = 0, q = 0,
-                                  whi = FALSE, exact = TRUE) {
+                                  whi = FALSE, exact = TRUE, tr = TRUE) {
   pars <- c(d, pars)
   fima.ll.auto(pars, y = y, d.max = d.max, Covar = Covar, q = q, p = p,
-               whi = whi)
+               whi = whi, tr = tr)
 }
 
 #' @export
@@ -634,7 +642,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                    eps = 10^(-7),
                                    print.iter = FALSE, whi = FALSE,
                                    exact = TRUE, d.min = -1.5,
-                                   d.start = NULL) {
+                                   d.start = NULL, tr = TRUE) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -682,7 +690,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                       method = "L-BFGS-B",
                       y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                       control = list("fnscale" = -1), d = curr.d,
-                      whi = whi, exact = exact)
+                      whi = whi, exact = exact, tr = tr)
 
     if (q == 0) {
       thetaval <- matrix(0, nrow = 1, ncol = k)
@@ -693,8 +701,12 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     if (p == 0) {
       pacfval <- phival <- matrix(0, nrow = 1, ncol = k)
     } else {
-      pacfval <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
-      phival <- apply(pacfval, 2, pacf.ar)
+      if (tr) {
+        pacfval <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
+        phival <- apply(pacfval, 2, pacf.ar)
+      } else {
+        phival <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
+      }
     }
 
     old.obj <- opt.arma$value
@@ -713,6 +725,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                        upper = d.max,
                        method = "L-BFGS-B",
                        y = y, d.max = d.max, Covar = Covar,
+                       ar = phival, ma = thetaval,
                        control = list("fnscale" = -1),
                        whi = whi, exact = exact)
         conv <- opt.d$convergence
@@ -746,7 +759,11 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           init.ma.pars <- c(init.fit[1:q, ])
         }
         if (p > 0) {
-          init.ar.pars <- ((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf))))
+          if (tr) {
+            init.ar.pars <- ((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf))))
+          } else {
+            init.ar.pars <- ((c(init.fit[q + 1:p, , drop = FALSE])))
+          }
         }
         if (p > 0 & q > 0) {
           init.pars <- c(init.ma.pars, init.ar.pars)
@@ -757,14 +774,21 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         }
       }
 
+      if (tr) {
+        lower.ar <- rep(-Inf, k*p)
+        upper.ar <- rep(Inf, k*p)
+      } else {
+        lower.ar <- rep(-1, k*p)
+        upper.ar <- rep(1, k*p)
+      }
       opt.arma <- optim(par = c(init.pars),
                         fn = fima.ll.auto.armaonly,
-                        lower = c(rep(-Inf, k*q), rep(-Inf, k*p)),
-                        upper = c(rep(Inf, k*q), rep(Inf, k*p)),
+                        lower = c(rep(-Inf, k*q), lower.ar),
+                        upper = c(rep(Inf, k*q), upper.ar),
                         method = "L-BFGS-B",
                         y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                         control = list("fnscale" = -1), d = curr.d,
-                        whi = whi, exact = exact)
+                        whi = whi, exact = exact, tr = tr)
 
       if (q == 0) {
         thetaval <- matrix(0, nrow = 1, ncol = k)
@@ -775,8 +799,12 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       if (p == 0) {
         pacfval <- phival <- matrix(0, nrow = 1, ncol = k)
       } else {
-        pacfval <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
-        phival <- apply(pacfval, 2, pacf.ar)
+        if (tr) {
+          pacfval <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
+          phival <- apply(pacfval, 2, pacf.ar)
+        } else {
+          phival <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
+        }
         if (print.iter) {
           cat("phi=", phival, "\n")
         }
