@@ -942,7 +942,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         }
         phivals[[which(curr.d == ds)]] <- phival
         if (1 %in% abs(phival)) {
-          objs[which(curr.d == ds)] <- NA
+          # objs[which(curr.d == ds)] <- NA
         }
       }
 
