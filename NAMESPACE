@@ -2,4 +2,5 @@
 
 export(arfima.acv)
 export(fima.ll.auto)
+export(fima.ll.auto.exact)
 export(fima.ll.auto.iterative)
