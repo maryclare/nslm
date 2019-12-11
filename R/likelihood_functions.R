@@ -162,7 +162,7 @@ hyperg <- function(a, c, rho, max.iter = 1000) {
   ssum <- 0
   diff <- Inf
   # while (i <= max.iter) {
-  while (abs(diff - ssum) > .Machine$double.eps) {
+  while (abs(diff - ssum) > .Machine$double.eps & i <= max.iter) {
     # cat(abs(diff - ssum), "\n")
     if (i == 0) {
       new <- rho^i
@@ -176,7 +176,7 @@ hyperg <- function(a, c, rho, max.iter = 1000) {
   return(ssum)
 }
 
-C.fun <- function(d, h, rho, p, hg1 = NULL, hg2 = NULL) {
+C.fun <- function(d, h, rho, p, hg1 = NULL, hg2 = NULL, max.iter = 1000) {
 
   if (d == 0) {
     if (h > 0) {
@@ -190,11 +190,11 @@ C.fun <- function(d, h, rho, p, hg1 = NULL, hg2 = NULL) {
     grat <- (gamma(1 - 2*d)/(gamma(1 - d)*gamma(d)))
     # hg1 <- hypergeo(d + h, 1, 1 - d + h, rho)
     if (is.null(hg1)) {
-      hg1 <- hyperg(d + h, 1 - d + h, rho)
+      hg1 <- hyperg(d + h, 1 - d + h, rho, max.iter = max.iter)
     }
     # hg2 <- hypergeo(d - h, 1, 1 - d - h, rho)
     if (is.null(hg2)) {
-      hg2 <- hyperg(d - h, 1 - d - h, rho)
+      hg2 <- hyperg(d - h, 1 - d - h, rho, max.iter = max.iter)
     }
 
     ratio*grat*((rho^(2*p)*hg1 + hg2 - 1))
@@ -204,7 +204,7 @@ C.fun <- function(d, h, rho, p, hg1 = NULL, hg2 = NULL) {
 
 #' @export
 arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
-                       phi = NULL, corr = TRUE) {
+                       phi = NULL, corr = TRUE, max.iter = 1000) {
 
   if (length(theta) == 1) {
     if (theta == 0) {
@@ -295,7 +295,7 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
             C.fun.val <- C.fun(d = d,
                                h = hv,
                                rho = inv.root[j], p = p,
-                               hg1 = hg1, hg2 = hg2)
+                               hg1 = hg1, hg2 = hg2, max.iter = max.iter)
             gam[s + 1] <- gam[s + 1] + chis[j]*psis[l == ls]*C.fun.val
           } else {
 
@@ -322,7 +322,7 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
 
 # Function that computes the log likelihood of an ARFIMA(p, d, q) proces
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                     whi = FALSE, exact = TRUE, just.logl = TRUE) {
+                     whi = FALSE, exact = TRUE, just.logl = TRUE, max.iter = 1000) {
   if (whi) {
     logl <- whi.ll(z = z, theta = theta, dfrac = dfrac, Covar = Covar, phi = phi,
                    just.logl = just.logl)
@@ -337,7 +337,7 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
     n <- length(z)
     acv <- arfima.acv(lag.max = n - 1, d = dfrac, theta = theta,
-                      phi = phi, corr = TRUE)
+                      phi = phi, corr = TRUE, max.iter = max.iter)
     r <- acv$r
     # r <- tacvfARFIMA(phi = phi, theta = -theta, dfrac = dfrac, maxlag = n - 1)
     # r <- r/r[1]
@@ -445,7 +445,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          whi = FALSE,
                          just.logl = TRUE,
                          tr = TRUE,
-                         un = FALSE) {
+                         un = FALSE, max.iter = 1000) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -490,7 +490,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         dfr <- d
         newthe <- theta[, j]
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
-                      Covar = Covar, whi = whi, just.logl = just.logl)
+                      Covar = Covar, whi = whi, just.logl = just.logl, max.iter = max.iter)
       } else if (d < -0.5 & d >= -1.5) {
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
         tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -1)), 1, prod)
@@ -499,7 +499,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
 
         dfr <- d + 1
         ll <- fima.ll(z, dfrac = dfr, phi = phi[, j],
-                      theta = newthe, Covar = Covar, whi = whi, just.logl = just.logl)
+                      theta = newthe, Covar = Covar, whi = whi, just.logl = just.logl, max.iter = max.iter)
       }
     } else if (d.max == 1.5) {
       z <- na.omit(y[-1, j] - y[-nrow(y), j])
@@ -515,7 +515,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- theta[, j]
         ll <- fima.ll(z,
                       dfrac = dfr, Covar = Covar, theta = newthe,
-                      phi = phi[, j], whi = whi, just.logl = just.logl)
+                      phi = phi[, j], whi = whi, just.logl = just.logl, max.iter = max.iter)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -525,7 +525,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         dfr <- d
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar, whi = whi,
-                      just.logl = just.logl)
+                      just.logl = just.logl, max.iter = max.iter)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -536,7 +536,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         dfr <- d + 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar, whi = whi,
-                      just.logl = just.logl)
+                      just.logl = just.logl, max.iter = max.iter)
       }
     } else if (d.max == 2.5) {
       z <- y[-1, j] - y[-nrow(y), j]
@@ -555,7 +555,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z,
                       dfrac = dfr, Covar = Covar,
                       phi = phi[, j], theta = newthe, whi = whi,
-                      just.logl = just.logl)
+                      just.logl = just.logl, max.iter = max.iter)
       } else if (d < 1.5 & d >= 0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -564,7 +564,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d - 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi, just.logl = just.logl)
+                      phi = phi[, j], Covar = Covar, whi = whi, just.logl = just.logl, max.iter = max.iter)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -573,7 +573,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
-                      Covar = Covar, whi = whi, just.logl = just.logl)
+                      Covar = Covar, whi = whi, just.logl = just.logl, max.iter = max.iter)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -583,7 +583,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         dfr <- d + 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar, whi = whi,
-                      just.logl = just.logl)
+                      just.logl = just.logl, max.iter = max.iter)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:4))
@@ -593,7 +593,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         dfr <- d + 2
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar, whi = whi,
-                      just.logl = just.logl)
+                      just.logl = just.logl, max.iter = max.iter)
       }
     }
     if (just.logl) {
@@ -618,7 +618,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
 }
 
 fima.ll.auto.donly <- function(pars, y, d.max = 1.5, Covar = NULL, ar = NULL, ma = NULL,
-                               whi = FALSE, exact = TRUE) {
+                               whi = FALSE, exact = TRUE, max.iter = 1000) {
   pars <- pars
   if (!is.null(ma)) {
     pars <- c(pars, ma)
@@ -632,15 +632,17 @@ fima.ll.auto.donly <- function(pars, y, d.max = 1.5, Covar = NULL, ar = NULL, ma
   } else {
     p <- 0
   }
-  fima.ll.auto(pars, y = y, d.max = d.max, Covar = Covar, q = q, p = p, whi = whi)
+  fima.ll.auto(pars, y = y, d.max = d.max, Covar = Covar, q = q, p = p, whi = whi,
+               max.iter = max.iter)
 }
 
 fima.ll.auto.armaonly <- function(pars, y, d.max = 1.5, Covar = NULL, d,
                                   p = 0, q = 0,
-                                  whi = FALSE, exact = TRUE, tr = TRUE, un = FALSE) {
+                                  whi = FALSE, exact = TRUE, tr = TRUE, un = FALSE,
+                                  max.iter = 1000) {
   pars <- c(d, pars)
   fima.ll.auto(pars, y = y, d.max = d.max, Covar = Covar, q = q, p = p,
-               whi = whi, tr = tr, un = un)
+               whi = whi, tr = tr, un = un, max.iter = max.iter)
 }
 
 #' @export
@@ -649,7 +651,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                    print.iter = FALSE, whi = FALSE,
                                    exact = TRUE, d.min = -1.5,
                                    d.start = NULL, tr = TRUE,
-                                   un = FALSE) {
+                                   un = FALSE, max.iter = 1000) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -660,7 +662,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
   opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max), y = y, maximum = TRUE,
                     tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
-                    whi = whi, exact = exact)
+                    whi = whi, exact = exact, max.iter = max.iter)
   curr.d <- opt.d$maximum
   objs <- opt.d$objective
 
@@ -715,7 +717,8 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                       method = "L-BFGS-B",
                       y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                       control = list("fnscale" = -1), d = curr.d,
-                      whi = whi, exact = exact, tr = tr, un = un)
+                      whi = whi, exact = exact, tr = tr, un = un,
+                      max.iter = max.iter)
 
     if (q == 0) {
       thetaval <- matrix(0, nrow = 1, ncol = k)
@@ -756,7 +759,8 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                        y = y, d.max = d.max, Covar = Covar,
                        ar = phival, ma = thetaval,
                        control = list("fnscale" = -1),
-                       whi = whi, exact = exact)
+                       whi = whi, exact = exact,
+                       max.iter = max.iter)
         conv <- opt.d$convergence
       }
       if (conv == 0) {
@@ -767,7 +771,8 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
                           Covar = Covar, ar = phival, ma = thetaval,
-                          whi = whi, exact = exact)
+                          whi = whi, exact = exact,
+                          max.iter = max.iter)
         curr.d <- opt.d$maximum
         obj.val <- opt.d$objective
       }
@@ -814,7 +819,8 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                         method = "L-BFGS-B",
                         y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                         control = list("fnscale" = -1), d = curr.d,
-                        whi = whi, exact = exact, tr = tr, un = un)
+                        whi = whi, exact = exact, tr = tr, un = un,
+                        max.iter = max.iter)
 
       if (q == 0) {
         thetaval <- matrix(0, nrow = 1, ncol = k)
@@ -863,7 +869,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                eps = 10^(-7),
                                print.iter = FALSE, whi = FALSE,
                                d.min = -1.5,
-                               tr = TRUE, by.val = 0.1, un = FALSE) {
+                               tr = TRUE, by.val = 0.1, un = FALSE, max.iter = 1000) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -934,7 +940,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                         method = "L-BFGS-B",
                         y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                         control = list("fnscale" = -1), d = curr.d,
-                        whi = whi, exact = exact, tr = tr, un = un)
+                        whi = whi, exact = exact, tr = tr, un = un, max.iter = max.iter)
       objs[which(curr.d == ds)] <- opt.arma$value
 
       if (q == 0) {
@@ -969,7 +975,8 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       objs[which(curr.d == ds)] <- fima.ll.auto.donly(pars = curr.d,
                                                       y = y,
                                                       d.max = d.max, Covar = Covar,
-                                                      whi = whi, exact = exact)
+                                                      whi = whi, exact = exact,
+                                                      max.iter = max.iter)
     }
 
   }
