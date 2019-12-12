@@ -666,7 +666,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     y <- matrix(y, nrow = length(y), ncol = 1)
   }
 
-  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-5)), y = y, maximum = TRUE,
+  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-4)), y = y, maximum = TRUE,
                     tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
                     whi = whi, exact = exact, max.iter = max.iter)
   curr.d <- opt.d$maximum
@@ -773,7 +773,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         curr.d <- opt.d$par
         obj.val <- opt.d$value
       } else {
-        opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-5)), y = y,
+        opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-4)), y = y,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
                           Covar = Covar, ar = phival, ma = thetaval,
