@@ -666,7 +666,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     y <- matrix(y, nrow = length(y), ncol = 1)
   }
 
-  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max), y = y, maximum = TRUE,
+  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-5)), y = y, maximum = TRUE,
                     tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
                     whi = whi, exact = exact, max.iter = max.iter)
   curr.d <- opt.d$maximum
@@ -773,7 +773,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         curr.d <- opt.d$par
         obj.val <- opt.d$value
       } else {
-        opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max), y = y,
+        opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-5)), y = y,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
                           Covar = Covar, ar = phival, ma = thetaval,
@@ -885,7 +885,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
   }
 
   ds <- seq(d.min, d.max, by = by.val)
-  ds <- ds[-length(ds)]
+  ds[length(ds)] <- ds[length(ds)] - 10^(-5)
   objs <- rep(NA, length(ds))
   phivals <- thetavals <- pars <- vector("list", length(ds))
   phivals <- lapply(phivals, function(x) {x <- rep(NA, p)})
@@ -936,7 +936,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         }
 
         if (q > 0) {
-          init.ma.pars <- c(init.fit[1:q, ])
+          init.ma.pars <- 0 # c(init.fit[1:q, ])
         }
         if (p > 0) {
           if (tr) {
