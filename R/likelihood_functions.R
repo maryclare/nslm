@@ -492,7 +492,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
   for (j in 1:k) {
     if (d.max == 0.5) {
       z <- na.omit(y[, j])
-      if (d < 0.5 & d >= -0.5) {
+      if (d <= 0.5 & d >= -0.5) {
         dfr <- d
         newthe <- theta[, j]
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
@@ -516,7 +516,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
           Covar <- NULL
         }
       }
-      if (d < 1.5 & d >= 0.5) {
+      if (d <= 1.5 & d >= 0.5) {
         dfr <- d - 1
         newthe <- theta[, j]
         ll <- fima.ll(z,
@@ -555,7 +555,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
           Covar <- NULL
         }
       }
-      if (d < 2.5 & d >= 1.5) {
+      if (d <= 2.5 & d >= 1.5) {
         dfr <- d - 2
         newthe <- theta[, j]
         ll <- fima.ll(z,
@@ -666,7 +666,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     y <- matrix(y, nrow = length(y), ncol = 1)
   }
 
-  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-4)), y = y, maximum = TRUE,
+  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max), y = y, maximum = TRUE,
                     tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
                     whi = whi, exact = exact, max.iter = max.iter)
   curr.d <- opt.d$maximum
@@ -773,7 +773,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         curr.d <- opt.d$par
         obj.val <- opt.d$value
       } else {
-        opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max - 10^(-4)), y = y,
+        opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max), y = y,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
                           Covar = Covar, ar = phival, ma = thetaval,
@@ -885,7 +885,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
   }
 
   ds <- seq(d.min, d.max, by = by.val)
-  ds[length(ds)] <- ds[length(ds)] - 10^(-5)
+  ds[length(ds)] <- ds[length(ds)]
   objs <- rep(NA, length(ds))
   phivals <- thetavals <- pars <- vector("list", length(ds))
   phivals <- lapply(phivals, function(x) {x <- rep(NA, p)})
