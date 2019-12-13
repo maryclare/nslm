@@ -943,11 +943,19 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           }
         }
         if (new.start) {
-          init.fit <- apply(y, 2, function(yy) {
-            arima(diffseries(lm(yy~Covar-1)$residuals, curr.d),
-                  order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
-          })
-          init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
+          # init.fit <- apply(y, 2, function(yy) {
+          #   ari <- NULL
+          #   try(ari <- arima(diffseries(lm(yy~Covar-1)$residuals, curr.d),
+          #         order = c(p, 0, q), include.mean = FALSE, method = "ML"),
+          #       silent = TRUE)
+          #   if (!is.null(ari)) {
+          #     return(ari$coef)
+          #   } else {
+          #     return(rep(0, p + q))
+          #   }
+          # })
+          # init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
+          init.fit <- matrix(0, nrow = q + p, ncol = k)
         }
 
         if (q > 0) {
