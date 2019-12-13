@@ -874,7 +874,8 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                eps = 10^(-7),
                                print.iter = FALSE, whi = FALSE,
                                d.min = -1.5,
-                               tr = TRUE, by.val = 0.1, un = FALSE, max.iter = Inf) {
+                               tr = TRUE, by.val = 0.1, un = FALSE, max.iter = Inf,
+                               maxit.opt = 1000) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -996,7 +997,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                               upper = c(rep(Inf, k*q), upper.ar),
                               method = "L-BFGS-B",
                               y = y, d.max = d.max, Covar = Covar, q = q, p = p,
-                              control = list("fnscale" = -1), d = curr.d,
+                              control = list("fnscale" = -1, maxit = maxit.opt), d = curr.d,
                               whi = whi, exact = exact, tr = tr, un = un, max.iter = max.iter),
             silent = TRUE)
         fail <- is.null(opt.arma)
