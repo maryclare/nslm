@@ -321,65 +321,64 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
 }
 
 # Function that computes the log likelihood of an ARFIMA(p, d, q) proces
+#' @export
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
                      whi = FALSE, exact = TRUE, just.logl = TRUE, max.iter = Inf) {
 
-  if (sum(abs(phi) == 1) > 0) {
-    return(NA)
-  } else {
-    if (whi) {
-      logl <- whi.ll(z = z, theta = theta, dfrac = dfrac, Covar = Covar, phi = phi,
-                     just.logl = just.logl)
 
-      if (just.logl) {
-        return(logl)
-      } else {
-        return(list("logl" = logl$logl, "sse" = logl$sse, "beta" = logl$beta,
-                    "fitted" = logl$fitted))
-      }
+  if (whi) {
+    logl <- whi.ll(z = z, theta = theta, dfrac = dfrac, Covar = Covar, phi = phi,
+                   just.logl = just.logl)
+
+    if (just.logl) {
+      return(logl)
     } else {
+      return(list("logl" = logl$logl, "sse" = logl$sse, "beta" = logl$beta,
+                  "fitted" = logl$fitted))
+    }
+  } else {
 
-      n <- length(z)
-      acv <- arfima.acv(lag.max = n - 1, d = dfrac, theta = theta,
-                        phi = phi, corr = TRUE, max.iter = max.iter)
-      r <- acv$r
-      # r <- tacvfARFIMA(phi = phi, theta = -theta, dfrac = dfrac, maxlag = n - 1)
-      # r <- r/r[1]
+    n <- length(z)
+    acv <- arfima.acv(lag.max = n - 1, d = dfrac, theta = theta,
+                      phi = phi, corr = TRUE, max.iter = max.iter)
+    r <- acv$r
+    # r <- tacvfARFIMA(phi = phi, theta = -theta, dfrac = dfrac, maxlag = n - 1)
+    # r <- r/r[1]
 
-      if (is.null(Covar)) {
-        Z <- matrix(z, nrow = n, ncol = 1)
-      } else {
-        Z <- cbind(z, Covar)
-      }
-      ad <- adj.durbin(Z = Z, r = r)
-      if (is.null(Covar)) {
-        sse <- sum(ad$E^2)
-        beta <- NULL
-      } else {
-        ytRiCovar <- t(ad$E[, 1, drop = FALSE])%*%ad$E[, -1, drop = FALSE]
-        sse <- crossprod(ad$E[, 1, drop = FALSE]) - crossprod(t(ytRiCovar),
-                                                              tcrossprod(solve(crossprod(ad$E[, -1, drop = FALSE])),
-                                                                         ytRiCovar))
-        beta <- tcrossprod(solve(crossprod(ad$E[, -1, drop = FALSE])), ytRiCovar)
-      }
-      logl <- -ad$lbeta.sum/(2*n) - log(sse/n)/2
+    if (is.null(Covar)) {
+      Z <- matrix(z, nrow = n, ncol = 1)
+    } else {
+      Z <- cbind(z, Covar)
+    }
+    ad <- adj.durbin(Z = Z, r = r)
+    if (is.null(Covar)) {
+      sse <- sum(ad$E^2)
+      beta <- NULL
+    } else {
+      ytRiCovar <- t(ad$E[, 1, drop = FALSE])%*%ad$E[, -1, drop = FALSE]
+      sse <- crossprod(ad$E[, 1, drop = FALSE]) - crossprod(t(ytRiCovar),
+                                                            tcrossprod(solve(crossprod(ad$E[, -1, drop = FALSE])),
+                                                                       ytRiCovar))
+      beta <- tcrossprod(solve(crossprod(ad$E[, -1, drop = FALSE])), ytRiCovar)
+    }
+    logl <- -ad$lbeta.sum/(2*n) - log(sse/n)/2
 
-      if (just.logl) {
-        return(logl)
+    if (just.logl) {
+      return(logl)
+    } else {
+      if (!is.null(Covar)) {
+        fitted <- Covar%*%beta
       } else {
-        if (!is.null(Covar)) {
-          fitted <- Covar%*%beta
-        } else {
-          fitted <- rep(0, length(z))
-        }
-        return(list("logl" = logl, "sse" = sse/(n*acv$var), "beta" = beta,
-                    "fitted" = fitted))
+        fitted <- rep(0, length(z))
       }
+      return(list("logl" = logl, "sse" = sse/(n*acv$var), "beta" = beta,
+                  "fitted" = fitted))
     }
   }
 }
 
 # Function that returns Whittle approximation to ll
+#' @export
 whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
                     just.logl = TRUE) {
 
@@ -679,7 +678,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       curr.d <- curr.d
     }
     init.fit <- apply(y, 2, function(yy) {
-      arima(diffseries(yy, curr.d),
+      arima(diffseries(lm(yy~Covar-1)$residuals, curr.d),
             order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
     })
     init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
@@ -899,44 +898,60 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     if (p != 0 | q != 0) {
 
       skip <- FALSE
-      if (curr.d != 0) {
-        if (curr.d > 0) {
-          skip <- is.na(objs[which(curr.d == ds) - 1])
-        } else {
-          skip <- is.na(objs[which(curr.d == ds) + 1])
-        }
-      }
+      # if (curr.d != 0) {
+      #   if (curr.d > 0) {
+      #     skip <- is.na(objs[which(curr.d == ds) - 1])
+      #   } else {
+      #     skip <- is.na(objs[which(curr.d == ds) + 1])
+      #   }
+      # }
 
       if (!skip) {
         new.start <- curr.d == 0
-        # if (!new.start) {
-        #   new.start <- 1 %in% abs(phival)
-        # }
-        if (new.start) {
-          # init.fit <- apply(y, 2, function(yy) {
-          #   arima(diffseries(yy, curr.d),
-          #         order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
-          # })
-          # init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
-          init.fit <- matrix(0, nrow = q + p, ncol = k)
-        } else {
+        if (!new.start) {
+          new.start <- 1 %in% abs(phival)
+        }
+        if (!new.start) {
           if (curr.d > 0) {
             if (curr.d == min(ds[ds > 0])) {
-              init.fit <- matrix(pars[[which(curr.d == ds) - 1]], nrow = q + p, ncol = k)
+              if (!is.na(objs[which(curr.d == ds) - 1])) {
+                init.fit <- matrix(pars[[which(curr.d == ds) - 1]], nrow = q + p, ncol = k)
+              } else {
+                new.start <- TRUE
+              }
             } else {
-              init.fit <- matrix(pars[[which(curr.d == ds) - 1]] + pars[[which(curr.d == ds) - 1]] - pars[[which(curr.d == ds) - 2]], nrow = q + p, ncol = k)
+              if (!is.na(objs[which(curr.d == ds) - 1]) & !is.na(objs[which(curr.d == ds) - 2])) {
+                init.fit <- matrix(pars[[which(curr.d == ds) - 1]] + pars[[which(curr.d == ds) - 1]] - pars[[which(curr.d == ds) - 2]], nrow = q + p, ncol = k)
+              } else {
+                new.start <- TRUE
+              }
             }
           } else {
             if (curr.d == max(ds[ds < 0])) {
-              init.fit <- matrix(pars[[which(curr.d == ds) + 1]], nrow = q + p, ncol = k)
+              if (!is.na(objs[which(curr.d == ds) + 1])) {
+                init.fit <- matrix(pars[[which(curr.d == ds) + 1]], nrow = q + p, ncol = k)
+              } else {
+                new.start <- TRUE
+              }
             } else {
-              init.fit <- matrix(pars[[which(curr.d == ds) + 1]] + pars[[which(curr.d == ds) + 1]] - pars[[which(curr.d == ds) + 2]], nrow = q + p, ncol = k)
+              if (!is.na(objs[which(curr.d == ds) + 1]) & !is.na(objs[which(curr.d == ds) + 2])) {
+                init.fit <- matrix(pars[[which(curr.d == ds) + 1]] + pars[[which(curr.d == ds) + 1]] - pars[[which(curr.d == ds) + 2]], nrow = q + p, ncol = k)
+              } else {
+                new.start <- TRUE
+              }
             }
           }
         }
+        if (new.start) {
+          init.fit <- apply(y, 2, function(yy) {
+            arima(diffseries(lm(yy~Covar-1)$residuals, curr.d),
+                  order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
+          })
+          init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
+        }
 
         if (q > 0) {
-          init.ma.pars <- 0 # c(init.fit[1:q, ])
+          init.ma.pars <- rep(0, q) # c(init.fit[1:q, ])
         }
         if (p > 0) {
           if (tr) {
@@ -966,6 +981,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           upper.ar <- rep(1, k*p)
         }
 
+        opt.arma <- NULL
         try(opt.arma <- optim(par = init.pars,
                               fn = fima.ll.auto.armaonly,
                               lower = c(rep(-Inf, k*q), lower.ar),
@@ -975,14 +991,8 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                               control = list("fnscale" = -1), d = curr.d,
                               whi = whi, exact = exact, tr = tr, un = un, max.iter = max.iter),
             silent = TRUE)
-        fail <- FALSE
-        if (!curr.d == 0) {
-          if (curr.d > 0) {
-            fail <- opt.arma$value ==  objs[which(curr.d == ds) - 1]
-          } else {
-            fail <- opt.arma$value ==  objs[which(curr.d == ds) + 1]
-          }
-        }
+        fail <- is.null(opt.arma)
+
         if (!fail) {
           objs[which(curr.d == ds)] <- opt.arma$value
           pars[[which(curr.d == ds)]] <- opt.arma$par
@@ -1031,12 +1041,16 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
   }
 
-  ret <- ds[which(objs == max(objs, na.rm = TRUE))]
-  if (q > 0) {
-    ret <- c(ret, c(thetavals[[which(objs == max(objs, na.rm = TRUE))]]))
-  }
-  if (p > 0) {
-    ret <- c(ret, c(phivals[[which(objs == max(objs, na.rm = TRUE))]]))
+  if (!(sum(is.na(objs) | is.nan(objs) | is.infinite(objs)) == length(objs))) {
+    ret <- ds[which(objs == max(objs, na.rm = TRUE))]
+    if (q > 0) {
+      ret <- c(ret, c(thetavals[[which(objs == max(objs, na.rm = TRUE))]]))
+    }
+    if (p > 0) {
+      ret <- c(ret, c(phivals[[which(objs == max(objs, na.rm = TRUE))]]))
+    }
+  } else {
+    ret <- c(NA, rep(NA, q), rep(NA, p))
   }
   return(list("pars" = ret, "objs" = objs, "ds" = ds, "pars"=pars, "phis" = phivals))
 
