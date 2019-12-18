@@ -491,7 +491,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          un = FALSE, max.iter = Inf, approx = FALSE,
                          maxpacf = 0.999) {
 
-  print(round(pars, 5))
+  # print(round(pars, 5))
   if (is.matrix(y)) {
     k <- ncol(y)
   } else {
