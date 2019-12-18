@@ -153,11 +153,9 @@ hyperg.pre <- function(a, c, rho, succ) {
 
 # This is slower and just as accurate as hypergeo, as far as I can tell
 hyperg <- function(a, c, rho, max.iter = Inf) {
-  if (Im(rho) == 0) {
-    rho <- Re(rho)
-  }
+  rho <- rho
   maxval <- 0.9999
-  rho <- ifelse(abs(rho) > maxval, maxval*sign(rho), rho)
+  rho <- ifelse(abs(rho) > maxval, maxval*sign(Re(rho)), rho) # Not totally sure about this
   i = 0
   ssum <- 0
   diff <- Inf
@@ -212,11 +210,22 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
     }
   }
 
-  if (length(phi) == 1) {
-    if (phi == 0) {
-      phi <- NULL
+  if (length(phi) > 1) {
+  for (i in length(phi):2) {
+    if (phi[i] == 0) {
+      phi <- phi[1:(i - 1)]
+    }
     }
   }
+
+  if (length(phi) == 1) {
+    if (phi == 0) {
+        phi <- NULL
+    }
+  }
+
+
+
 
   q <- ifelse(!is.null(theta), length(theta), 0)
   p <- ifelse(!is.null(phi), length(phi), 0)
@@ -482,7 +491,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          un = FALSE, max.iter = Inf, approx = FALSE,
                          maxpacf = 0.999) {
 
-  # print(round(pars, 5))
+  print(round(pars, 5))
   if (is.matrix(y)) {
     k <- ncol(y)
   } else {
@@ -498,15 +507,15 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
   if (p > 0) {
     if (tr) { # I don't think this will work correctly with k > 1 as written
       if (un) {
-        pacf <- pacf.ar(expit(pars[1 + k*q + 1:(p*k)])*2 - 1)
+        pacf <- expit(pars[1 + k*q + 1:(p*k)])*2 - 1
       } else {
-        pacf <- pacf.ar(pars[1 + k*q + 1:(p*k)])
+        pacf <- pars[1 + k*q + 1:(p*k)]
       }
       if (sum(abs(pacf) > maxpacf) > 0) {
         out.bound <- which(abs(pacf) > maxpacf, arr.ind = TRUE)
         pacf[out.bound] <- maxpacf*sign(pacf[out.bound])
       }
-      phi <- matrix(pacf, nrow = p, ncol = k)
+      phi <- matrix(pacf.ar(pacf), nrow = p, ncol = k)
 
     } else {
       phi <-  matrix(pars[1 + k*q + 1:(p*k)], nrow = p, ncol = k)
@@ -1038,9 +1047,9 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         if (p > 0) {
           if (tr) {
             if (un) {
-              init.ar.pars <- logit((((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
+              init.ar.pars <- ((((c(init.fit[q + 1:p, , drop = FALSE])))))
             } else {
-              init.ar.pars <- ((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf))))
+              init.ar.pars <- ((c(init.fit[q + 1:p, , drop = FALSE])))
             }
           } else {
             init.ar.pars <- c(init.fit[q + 1:p, , drop = FALSE])
