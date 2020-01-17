@@ -658,6 +658,83 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       }
+    } else if (d.max == 3.5) {
+      z <- y[-1, j] - y[-nrow(y), j]
+      z <- na.omit(z[-1] - z[-length(z)])
+      z <- na.omit(z[-1] - z[-length(z)])
+      if (!is.null(Covar)) {
+        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
+        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
+        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
+        Covar <- Covar[, !(apply(Covar, 2, min) == 0 & apply(Covar, 2, max) == 0), drop = FALSE]
+        if (ncol(Covar) == 0) {
+          Covar <- NULL
+        }
+      }
+      if (d <= 3.5 & d >= 2.5) {
+        dfr <- d - 3
+        newthe <- theta[, j]
+        ll <- fima.ll(z,
+                      dfrac = dfr, Covar = Covar,
+                      phi = phi[, j], theta = newthe, whi = whi,
+                      just.logl = just.logl, max.iter = max.iter,
+                      approx = approx)
+      } else if (d < 2.5 & d >= 1.5) {
+
+        pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
+        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -1)), 1, prod)
+        pows$pow <- rowSums(pows)
+        newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
+        dfr <- d - 2
+        ll <- fima.ll(z, dfrac = dfr, theta = newthe,
+                      phi = phi[, j], Covar = Covar, whi = whi,
+                      just.logl = just.logl, max.iter = max.iter,
+                      approx = approx)
+      } else if (d < 1.5 & d >= 0.5) {
+
+        pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
+        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -2, 1)), 1, prod)
+        pows$pow <- rowSums(pows)
+        newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
+        dfr <- d - 1
+        ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
+                      Covar = Covar, whi = whi, just.logl = just.logl,
+                      max.iter = max.iter,
+                      approx = approx)
+      } else if (d < 0.5 & d >= -0.5) {
+
+        pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
+        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -3, 3, -1)), 1, prod)
+        pows$pow <- rowSums(pows)
+        newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
+        dfr <- d
+        ll <- fima.ll(z, dfrac = dfr, theta = newthe,
+                      phi = phi[, j], Covar = Covar, whi = whi,
+                      just.logl = just.logl, max.iter = max.iter,
+                      approx = approx)
+      } else if (d < -0.5 & d >= -1.5) {
+
+        pows <- expand.grid(c(0:length(theta[, j])), c(0:4))
+        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -4, 6, -4, 1)), 1, prod)
+        pows$pow <- rowSums(pows)
+        newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
+        dfr <- d + 1
+        ll <- fima.ll(z, dfrac = dfr, theta = newthe,
+                      phi = phi[, j], Covar = Covar, whi = whi,
+                      just.logl = just.logl, max.iter = max.iter,
+                      approx = approx)
+      } else if (d < -1.5 & d >= -2.5) {
+
+        pows <- expand.grid(c(0:length(theta[, j])), c(0:5))
+        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -5, 10, -10, 5, -1)), 1, prod)
+        pows$pow <- rowSums(pows)
+        newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
+        dfr <- d + 2
+        ll <- fima.ll(z, dfrac = dfr, theta = newthe,
+                      phi = phi[, j], Covar = Covar, whi = whi,
+                      just.logl = just.logl, max.iter = max.iter,
+                      approx = approx)
+      }
     }
     if (just.logl) {
       lls[j] <- ll
