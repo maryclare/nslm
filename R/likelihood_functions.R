@@ -781,7 +781,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
     return(sum(lls))
   } else {
     return(list("lls" = lls, "betas" = betas, "sses" = sses, "fits" = fits,
-                "dfr" = dfr, "phis" = phis, "theta" = thetas))
+                "dfr" = dfr, "phis" = phis, "theta" = thetas, "Covar" = Covar))
   }
 }
 
