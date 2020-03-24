@@ -1277,6 +1277,41 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
 }
 
+#' @export
+comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
+                    p, q) {
+  if (!is.null(get.val$Covar)) {
+    beta <- pars[1:ncol(Covar.diff)]
+    rest <- pars[(ncol(Covar.diff) + 1):length(pars)]
+    off <-  c(Covar.diff%*%beta)
+  } else {
+    rest <- pars
+    off <- rep(0, length(y) - d.max + 0.5)
+  }
+  fima.ll.auto(y = y, d.max = d.max,
+               Covar = Covar, whi = whi,
+               offset = off,
+               scale = sqrt(sse),
+               just.logl = TRUE,
+               pars = rest, p = p, q = q)
+}
+
+#' @export
+comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps) {
+
+  get.val <- fima.ll.auto(y = y, d.max = d.max,
+                          Covar = Covar, whi = whi, par = opt.obj$pars,
+                          just.logl = FALSE, p = p, q = q)
+
+  H <- fdHess(pars = c(c(na.omit(get.val$betas)), opt.obj$pars),
+                  comp.ll,
+                  y = y,
+                  d.max = d.max,
+                  Covar = Covar, whi = whi,
+                  Covar.diff = get.val$Covar,
+                  sse = get.val$sses, p = p, q = q, eps = eps)$Hessian
+  return(H)
+}
 
 # fima.ll.auto.mcmc <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 #                               print.iter = FALSE, whi = FALSE,
