@@ -490,7 +490,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          tr = TRUE,
                          un = FALSE, max.iter = Inf, approx = FALSE,
                          maxpacf = 0.999,
-                         offset = rep(0, length(y) - d.max - 0.5), scale = 1) {
+                         offset = rep(0, length(y) - d.max + 0.5), scale = 1) {
 
   # print(round(pars, 5))
   if (is.matrix(y)) {
