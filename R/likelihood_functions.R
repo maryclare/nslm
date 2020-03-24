@@ -1280,7 +1280,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 #' @export
 comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
                     p, q) {
-  if (!is.null(get.val$Covar)) {
+  if (!is.null(Covar.diff)) {
     beta <- pars[1:ncol(Covar.diff)]
     rest <- pars[(ncol(Covar.diff) + 1):length(pars)]
     off <-  c(Covar.diff%*%beta)
