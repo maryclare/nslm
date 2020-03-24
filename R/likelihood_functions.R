@@ -1309,7 +1309,7 @@ comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps) {
                   d.max = d.max,
                   Covar = Covar, whi = whi,
                   Covar.diff = get.val$Covar,
-                  sse = get.val$sses, p = p, q = q, eps = eps)$Hessian
+                  sse = get.val$sses, p = p, q = q, .relStep = eps)$Hessian
   return(H)
 }
 
