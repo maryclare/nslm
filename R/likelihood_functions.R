@@ -1075,7 +1075,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     which.first <- which(abs(ds - d.start) == min(abs(ds - d.start)))
     first.d <- ds[which.first]
   }
-  d.start <- first
+  d.start <- first.d
 
 
   for (curr.d in ds[order(abs(ds - d.start), decreasing = FALSE)]) {
