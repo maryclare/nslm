@@ -1049,7 +1049,8 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                tr = TRUE, by.val = 0.1, un = FALSE, max.iter = Inf,
                                factr = 1e7, d.max.opt = d.max,
                                approx = FALSE,
-                               maxpacf = 0.999) {
+                               maxpacf = 0.999,
+                               d.start = NULL) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -1067,11 +1068,17 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
   thetavals <- lapply(phivals, function(x) {x <- rep(NA, q)})
   pars <- lapply(phivals, function(x) {x <- rep(NA, p + q)})
 
-  which.first <- which(abs(ds) == min(abs(ds)))
-  first.d <- ds[which.first]
+  if (is.null(d.start)) {
+    which.first <- which(abs(ds) == min(abs(ds)))
+    first.d <- ds[which.first]
+  } else {
+    which.first <- which(abs(ds - d.start) == min(abs(ds - d.start)))
+    first.d <- ds[which.first]
+  }
+  d.start <- first
 
 
-  for (curr.d in ds[order(abs(ds), decreasing = FALSE)]) {
+  for (curr.d in ds[order(abs(ds - d.start), decreasing = FALSE)]) {
     if (print.iter) {
       cat("Approximate: ", approx, "\n")
       cat("d=", curr.d, "\n")
@@ -1101,7 +1108,8 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
             if (is.na(objs[which(curr.d == ds) - 1])) {
               new.start <- TRUE
-            } else if (is.na(objs[which(curr.d == ds) - 2])) {
+            }
+            else if (is.na(objs[which(curr.d == ds) - 2])) {
               if (!lower.bound[which(curr.d == ds) - 1] | !upper.bound[which(curr.d == ds) - 1]) {
               init.fit <- matrix(pars[[which(curr.d == ds) - 1]], nrow = q + p, ncol = k)
               }
