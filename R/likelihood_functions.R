@@ -785,8 +785,12 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
   }
 }
 
-fima.ll.auto.donly <- function(pars, y, d.max = 1.5, Covar = NULL, ar = NULL, ma = NULL,
-                               whi = FALSE, exact = TRUE, max.iter = Inf,
+fima.ll.auto.donly <- function(pars, y,
+                               d.max = 1.5,
+                               Covar = NULL,
+                               ar = NULL, ma = NULL,
+                               whi = FALSE, exact = TRUE,
+                               max.iter = Inf,
                                approx = FALSE) {
   pars <- pars
   if (!is.null(ma)) {
@@ -820,6 +824,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                    eps = 10^(-7),
                                    print.iter = FALSE, whi = FALSE,
                                    exact = TRUE, d.min = -1.5,
+                                   d.fix = FALSE,
                                    d.start = NULL, tr = TRUE,
                                    un = FALSE, max.iter = Inf,
                                    factr = 1e7,
@@ -834,18 +839,23 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     y <- matrix(y, nrow = length(y), ncol = 1)
   }
 
-  opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max.opt), y = y, maximum = TRUE,
-                    tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
-                    whi = whi, exact = exact, max.iter = max.iter,
-                    approx = approx)
-  curr.d <- opt.d$maximum
-  objs <- opt.d$objective
-
   if (p != 0 | q != 0) {
     if (!is.null(d.start)) {
       curr.d <- d.start
+      objs <- fima.ll.auto.donly(y = y,
+                                 d.max = d.max, Covar = Covar,
+                                 whi = whi, exact = exact,
+                                 max.iter = max.iter,
+                                 approx = approx)
     } else {
-      curr.d <- curr.d
+      opt.d <- optimize(fima.ll.auto.donly,
+                        interval = c(d.min, d.max.opt),
+                        y = y, maximum = TRUE,
+                        tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
+                        whi = whi, exact = exact, max.iter = max.iter,
+                        approx = approx)
+      curr.d <- opt.d$maximum
+      objs <- opt.d$objective
     }
     init.fit <- apply(y, 2, function(yy) {
       arima(diffseries.mc(lm(yy~Covar-1)$residuals, curr.d),
@@ -926,7 +936,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     while (abs(diff) > eps) {
 
       conv <- 1
-      if (!exact & count > 1) {
+      if (!d.fix & !exact & count > 1) {
         opt.d <- optim(par = curr.d,
                        fn = fima.ll.auto.donly,
                        lower = d.min,
@@ -942,7 +952,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       if (conv == 0) {
         curr.d <- opt.d$par
         obj.val <- opt.d$value
-      } else {
+      } else if (!d.fix) {
         opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max.opt), y = y,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
