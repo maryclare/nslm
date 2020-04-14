@@ -1281,6 +1281,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     ret <- c(NA, rep(NA, q), rep(NA, p))
   }
   return(list("pars" = ret, "objs" = objs, "ds" = ds, "pars"=pars, "phis" = phivals,
+              "thetas" = thetavals,
               "sses" = sses))
 
 }
