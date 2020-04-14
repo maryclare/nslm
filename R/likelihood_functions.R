@@ -842,7 +842,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
   if (p != 0 | q != 0) {
     if (!is.null(d.start)) {
       curr.d <- d.start
-      objs <- fima.ll.auto.donly(y = y,
+      objs <- fima.ll.auto.donly(pars = d.start, y = y,
                                  d.max = d.max, Covar = Covar,
                                  whi = whi, exact = exact,
                                  max.iter = max.iter,
