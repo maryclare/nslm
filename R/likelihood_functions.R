@@ -933,7 +933,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     diff <- Inf
     count <- 0
 
-    while (abs(diff) > eps) {
+    while (!d.fix & abs(diff) > eps) {
 
       conv <- 1
       if (!d.fix & !exact & count > 1) {
@@ -952,7 +952,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       if (conv == 0) {
         curr.d <- opt.d$par
         obj.val <- opt.d$value
-      } else if (!d.fix) {
+      } else {
         opt.d <- optimize(fima.ll.auto.donly, interval = c(d.min, d.max.opt), y = y,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
