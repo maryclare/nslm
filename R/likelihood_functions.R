@@ -839,24 +839,26 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     y <- matrix(y, nrow = length(y), ncol = 1)
   }
 
+  if (is.null(d.start)) {
+    opt.d <- optimize(fima.ll.auto.donly,
+                      interval = c(d.min, d.max.opt),
+                      y = y, maximum = TRUE,
+                      tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
+                      whi = whi, exact = exact, max.iter = max.iter,
+                      approx = approx)
+    curr.d <- opt.d$maximum
+    objs <- opt.d$objective
+  } else {
+    curr.d <- d.start
+    objs <- fima.ll.auto.donly(pars = d.start, y = y,
+                               d.max = d.max, Covar = Covar,
+                               whi = whi, exact = exact,
+                               max.iter = max.iter,
+                               approx = approx)
+  }
+
   if (p != 0 | q != 0) {
-    if (!is.null(d.start)) {
-      curr.d <- d.start
-      objs <- fima.ll.auto.donly(pars = d.start, y = y,
-                                 d.max = d.max, Covar = Covar,
-                                 whi = whi, exact = exact,
-                                 max.iter = max.iter,
-                                 approx = approx)
-    } else {
-      opt.d <- optimize(fima.ll.auto.donly,
-                        interval = c(d.min, d.max.opt),
-                        y = y, maximum = TRUE,
-                        tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
-                        whi = whi, exact = exact, max.iter = max.iter,
-                        approx = approx)
-      curr.d <- opt.d$maximum
-      objs <- opt.d$objective
-    }
+
     init.fit <- apply(y, 2, function(yy) {
       arima(diffseries.mc(lm(yy~Covar-1)$residuals, curr.d),
             order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
@@ -1111,38 +1113,45 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       }
 
       if (!skip) {
-        new.start <- curr.d == ds[which(abs(ds) == min(abs(ds)))]
+        new.start <- curr.d == ds[which.first]
 
         if (!new.start) {
           if (curr.d > first.d) {
 
-            if (is.na(objs[which(curr.d == ds) - 1])) {
+            if (((which(curr.d == ds) - 1) < 1) | is.na(objs[which(curr.d == ds) - 1])) {
               new.start <- TRUE
-            }
-            else if (is.na(objs[which(curr.d == ds) - 2])) {
+            # } else if (is.na(objs[which(curr.d == ds) - 2])) {
+            } else {
               if (!lower.bound[which(curr.d == ds) - 1] | !upper.bound[which(curr.d == ds) - 1]) {
               init.fit <- matrix(pars[[which(curr.d == ds) - 1]], nrow = q + p, ncol = k)
-              }
-            } else {
-              if (!lower.bound[which(curr.d == ds) - 1] | !upper.bound[which(curr.d == ds) - 1] |
-                  !lower.bound[which(curr.d == ds) - 2] | !upper.bound[which(curr.d == ds) - 2]) {
-              init.fit <- matrix(pars[[which(curr.d == ds) - 1]] + pars[[which(curr.d == ds) - 1]] - pars[[which(curr.d == ds) - 2]], nrow = q + p, ncol = k)
-              }
-              }
-          } else {
-
-            if (is.na(objs[which(curr.d == ds) + 1])) {
-              new.start <- TRUE
-            } else if (is.na(objs[which(curr.d == ds) + 2])) {
-              if (!lower.bound[which(curr.d == ds) + 1] | !upper.bound[which(curr.d == ds) + 1]) {
-              init.fit <- matrix(pars[[which(curr.d == ds) + 1]], nrow = q + p, ncol = k)
-              }
-            } else {
-              if (!lower.bound[which(curr.d == ds) + 1] | !upper.bound[which(curr.d == ds) + 1] |
-                  !lower.bound[which(curr.d == ds) + 2] | !upper.bound[which(curr.d == ds) + 2]) {
-              init.fit <- matrix(pars[[which(curr.d == ds) + 1]] + pars[[which(curr.d == ds) + 1]] - pars[[which(curr.d == ds) + 2]], nrow = q + p, ncol = k)
+              } else {
+                new.start <- TRUE
               }
             }
+            # } else {
+            #   if (!lower.bound[which(curr.d == ds) - 1] | !upper.bound[which(curr.d == ds) - 1] |
+            #       !lower.bound[which(curr.d == ds) - 2] | !upper.bound[which(curr.d == ds) - 2]) {
+            #   init.fit <- matrix(pars[[which(curr.d == ds) - 1]] + pars[[which(curr.d == ds) - 1]] - pars[[which(curr.d == ds) - 2]], nrow = q + p, ncol = k)
+            #   }
+            #   }
+          } else {
+
+            if (((which(curr.d == ds) + 1) > length(objs)) | is.na(objs[which(curr.d == ds) + 1])) {
+              new.start <- TRUE
+            # } else if (is.na(objs[which(curr.d == ds) + 2])) {
+            } else {
+              if (!lower.bound[which(curr.d == ds) + 1] | !upper.bound[which(curr.d == ds) + 1]) {
+              init.fit <- matrix(pars[[which(curr.d == ds) + 1]], nrow = q + p, ncol = k)
+              } else {
+                new.start <- TRUE
+              }
+            }
+            # } else {
+            #   if (!lower.bound[which(curr.d == ds) + 1] | !upper.bound[which(curr.d == ds) + 1] |
+            #       !lower.bound[which(curr.d == ds) + 2] | !upper.bound[which(curr.d == ds) + 2]) {
+            #   init.fit <- matrix(pars[[which(curr.d == ds) + 1]] + pars[[which(curr.d == ds) + 1]] - pars[[which(curr.d == ds) + 2]], nrow = q + p, ncol = k)
+            #   }
+            # }
 
 
           }
