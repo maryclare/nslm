@@ -825,7 +825,9 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                    print.iter = FALSE, whi = FALSE,
                                    exact = TRUE, d.min = -1.5,
                                    d.fix = FALSE,
-                                   d.start = NULL, tr = TRUE,
+                                   d.start = NULL,
+                                   rest.start = NULL,
+                                   tr = TRUE,
                                    un = FALSE, max.iter = Inf,
                                    factr = 1e7,
                                    d.max.opt = d.max,
@@ -859,11 +861,15 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
   if (p != 0 | q != 0) {
 
+    if (is.null(rest.start)) {
     init.fit <- apply(y, 2, function(yy) {
       arima(diffseries.mc(lm(yy~Covar-1)$residuals, curr.d),
             order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
     })
-    init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
+      init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
+    } else {
+      init.fit <- matrix(rest.start, nrow = q + p, ncol = k)
+    }
 
 
     if (q > 0) {
