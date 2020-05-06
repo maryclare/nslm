@@ -849,7 +849,6 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                       whi = whi, exact = exact, max.iter = max.iter,
                       approx = approx)
     curr.d <- opt.d$maximum
-    objs <- opt.d$objective
   } else {
     curr.d <- d.start
   }
@@ -900,11 +899,15 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     }
 
     if (un) {
-      lower.ma <- lower.ar <- rep(-Inf, k*p)
-      lower.ma <- upper.ar <- rep(Inf, k*p)
+      lower.ar <- rep(-Inf, k*p)
+      upper.ar <- rep(Inf, k*p)
+      lower.ma <- rep(-Inf, k*q)
+      upper.ma <- rep(Inf, k*q)
     } else {
-      lower.ma <- lower.ar <- rep(-1, k*p)
-      upper.ma <- upper.ar <- rep(1, k*p)
+      lower.ar <- rep(-1, k*p)
+      upper.ar <- rep(1, k*p)
+      lower.ma <- rep(-1, k*q)
+      upper.ma <- rep(1, k*q)
     }
 
     opt.arma <- optim(par = init.pars,
@@ -928,7 +931,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         } else {
           pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
         }
-        thetaval <- -apply(pmcfval, 2, pacf.ar)
+        thetaval <- apply(pmcfval, 2, pacf.ar)
       } else {
         thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
       }
@@ -1013,7 +1016,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           } else {
             pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
           }
-          thetaval <- -apply(pmcfval, 2, pacf.ar)
+          thetaval <- apply(pmcfval, 2, pacf.ar)
         } else {
           thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
         }
@@ -1218,11 +1221,15 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
 
         if (un) {
-          lower.ma <- lower.ar <- rep(-Inf, k*p)
-          upper.ma <- upper.ar <- rep(Inf, k*p)
+          lower.ar <- rep(-Inf, k*p)
+          upper.ar <- rep(Inf, k*p)
+          lower.ma <- rep(-Inf, k*q)
+          upper.ma <- rep(Inf, k*q)
         } else {
-          lower.ma <- lower.ar <- rep(-1, k*p)
-          upper.ma <- upper.ar <- rep(1, k*p)
+          lower.ar <- rep(-1, k*p)
+          upper.ar <- rep(1, k*p)
+          lower.ma <- rep(-1, k*q)
+          upper.ma <- rep(1, k*q)
         }
 
         opt.arma <- NULL
@@ -1231,9 +1238,13 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                               lower = c(lower.ma, lower.ar),
                               upper = c(upper.ma, upper.ar),
                               method = "L-BFGS-B",
-                              y = y, d.max = d.max, Covar = Covar, q = q, p = p,
-                              control = list("fnscale" = -1, "factr" = factr), d = curr.d,
-                              whi = whi, exact = exact, tr = tr, un = un,
+                              y = y, d.max = d.max,
+                              Covar = Covar, q = q, p = p,
+                              control = list("fnscale" = -1,
+                                             "factr" = factr),
+                              d = curr.d,
+                              whi = whi, exact = exact,
+                              tr = tr, un = un,
                               max.iter = max.iter, approx = approx,
                               maxpacf = maxpacf))
 
@@ -1252,16 +1263,16 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                 } else {
                   pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
                 }
-                thetaval <- -apply(pmcfval, 2, pacf.ar)
+                thetaval <- apply(pmcfval, 2, pacf.ar)
+                if (sum(abs(pmcfval) >= maxpacf) > 0) {
+                  objs[which(curr.d == ds)] <- NA
+                  upper.bound[which(curr.d == ds)] <- sum(pmcfval >= maxpacf) > 0
+                  lower.bound[which(curr.d == ds)] <- sum(pmcfval <= -maxpacf) > 0
+                }
               } else {
                 thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
               }
               thetavals[[which(curr.d == ds)]] <- thetaval
-              if (sum(abs(pmcfval) >= maxpacf) > 0) {
-                objs[which(curr.d == ds)] <- NA
-                upper.bound[which(curr.d == ds)] <- sum(pmcfval >= maxpacf) > 0
-                lower.bound[which(curr.d == ds)] <- sum(pmcfval <= -maxpacf) > 0
-              }
               if (print.iter) {
                 cat("thetval=", thetaval, "\n")
               }
@@ -1278,15 +1289,15 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                 pacfval <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
               }
               phival <- apply(pacfval, 2, pacf.ar)
+              if (sum(abs(pacfval) >= maxpacf) > 0) {
+                objs[which(curr.d == ds)] <- NA
+                upper.bound[which(curr.d == ds)] <- sum(pacfval >= maxpacf) > 0
+                lower.bound[which(curr.d == ds)] <- sum(pacfval <= -maxpacf) > 0
+              }
             } else {
               phival <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
             }
             phivals[[which(curr.d == ds)]] <- phival
-            if (sum(abs(pacfval) >= maxpacf) > 0) {
-              objs[which(curr.d == ds)] <- NA
-              upper.bound[which(curr.d == ds)] <- sum(pacfval >= maxpacf) > 0
-              lower.bound[which(curr.d == ds)] <- sum(pacfval <= -maxpacf) > 0
-            }
             if (print.iter) {
               cat("phi=", phival, "\n")
             }
