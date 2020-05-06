@@ -950,7 +950,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     }
 
     old.obj <- opt.arma$value
-    objs <- c(objs, old.obj)
+    objs <- old.obj
 
     diff <- Inf
     count <- 0
