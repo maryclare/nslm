@@ -992,43 +992,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       }
 
       if (p != 0 | q != 0) {
-      #   init.fit <- apply(y, 2, function(yy) {
-      #     arima(diffseries.mc(yy, curr.d),
-      #           order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
-      #   })
-      #
-      #
-      #   if (q > 0) {
-      #     if (tr) {
-      #       if (un) {
-      #         init.ma.pars <- logit((((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
-      #       } else {
-      #         init.ma.pars <- ((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf))))
-      #       }
-      #
-      #     } else {
-      #       init.ma.pars <- c(init.fit[1:q, , drop = FALSE])
-      #     }
-      #   }
-      #   if (p > 0) {
-      #     if (tr) {
-      #       if (un) {
-      #         init.ar.pars <- logit((((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
-      #       } else {
-      #         init.ar.pars <- ((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf))))
-      #       }
-      #     } else {
-      #       init.ar.pars <- ((c(init.fit[q + 1:p, , drop = FALSE])))
-      #     }
-      #   }
-      #   if (p > 0 & q > 0) {
-      #     init.pars <- c(init.ma.pars, init.ar.pars)
-      #   } else if (p == 0) {
-      #     init.pars <- init.ma.pars
-      #   } else {
-      #     init.pars <- init.ar.pars
-      #   }
-      # }
+
       init.pars <- opt.arma$par
 
       opt.arma <- optim(par = c(init.pars),
@@ -1055,7 +1019,6 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         } else {
           thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
         }
-      }
 
       if (p == 0) {
         pacfval <- phival <- matrix(0, nrow = 1, ncol = k)
