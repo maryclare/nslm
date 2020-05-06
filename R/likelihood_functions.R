@@ -991,14 +991,12 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         cat("d=", round(curr.d, 3), "\n")
       }
 
-      if (p != 0 | q != 0) {
-
       init.pars <- opt.arma$par
 
       opt.arma <- optim(par = c(init.pars),
                         fn = fima.ll.auto.armaonly,
-                        lower = c(rep(-Inf, k*q), lower.ar),
-                        upper = c(rep(Inf, k*q), upper.ar),
+                        lower = c(lower.ma, lower.ar),
+                        upper = c(lower.ma, upper.ar),
                         method = "L-BFGS-B",
                         y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                         control = list("fnscale" = -1, "factr"=factr), d = curr.d,
