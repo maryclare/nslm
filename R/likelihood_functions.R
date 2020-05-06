@@ -1019,6 +1019,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         } else {
           thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
         }
+      }
 
       if (p == 0) {
         pacfval <- phival <- matrix(0, nrow = 1, ncol = k)
