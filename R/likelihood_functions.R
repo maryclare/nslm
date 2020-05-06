@@ -852,11 +852,6 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     objs <- opt.d$objective
   } else {
     curr.d <- d.start
-    objs <- fima.ll.auto.donly(pars = d.start, y = y,
-                               d.max = d.max, Covar = Covar,
-                               whi = whi, exact = exact,
-                               max.iter = max.iter,
-                               approx = approx)
   }
 
   if (p != 0 | q != 0) {
@@ -873,7 +868,16 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
 
     if (q > 0) {
-      init.ma.pars <- c(init.fit[1:q, ])
+      if (tr) {
+        if (un) {
+          init.ma.pars <- logit((((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
+        } else {
+          init.ma.pars <- ((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf))))
+        }
+
+      } else {
+        init.ma.pars <- c(init.fit[1:q, , drop = FALSE])
+      }
     }
     if (p > 0) {
       if (tr) {
@@ -896,17 +900,17 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     }
 
     if (un) {
-      lower.ar <- rep(-Inf, k*p)
-      upper.ar <- rep(Inf, k*p)
+      lower.ma <- lower.ar <- rep(-Inf, k*p)
+      lower.ma <- upper.ar <- rep(Inf, k*p)
     } else {
-      lower.ar <- rep(-1, k*p)
-      upper.ar <- rep(1, k*p)
+      lower.ma <- lower.ar <- rep(-1, k*p)
+      upper.ma <- upper.ar <- rep(1, k*p)
     }
 
     opt.arma <- optim(par = init.pars,
                       fn = fima.ll.auto.armaonly,
-                      lower = c(rep(-Inf, k*q), lower.ar),
-                      upper = c(rep(Inf, k*q), upper.ar),
+                      lower = c(lower.ma, lower.ar),
+                      upper = c(lower.ma, upper.ar),
                       method = "L-BFGS-B",
                       y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                       control = list("fnscale" = -1, "factr" = factr), d = curr.d,
@@ -915,9 +919,19 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                       approx = approx, maxpacf = maxpacf)
 
     if (q == 0) {
-      thetaval <- matrix(0, nrow = 1, ncol = k)
+      pmcfval <- thetaval <- matrix(0, nrow = 1, ncol = k)
     } else {
       thetaval <- matrix(opt.arma$par[1:(k*q)], nrow = q, ncol = k)
+      if (tr) {
+        if (un) {
+          pmcfval <- matrix(expit((opt.arma$par[1:(k*q)]))*2 - 1, nrow = q, ncol = k)
+        } else {
+          pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+        }
+        thetaval <- -apply(pmcfval, 2, pacf.ar)
+      } else {
+        thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+      }
     }
 
     if (p == 0) {
@@ -978,34 +992,44 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       }
 
       if (p != 0 | q != 0) {
-        init.fit <- apply(y, 2, function(yy) {
-          arima(diffseries.mc(yy, curr.d),
-                order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
-        })
-        init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
-
-        if (q > 0) {
-          init.ma.pars <- c(init.fit[1:q, ])
-        }
-        if (p > 0) {
-          if (tr) {
-            if (un) {
-              init.ar.pars <- logit((((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
-            } else {
-              init.ar.pars <- ((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf))))
-            }
-          } else {
-            init.ar.pars <- ((c(init.fit[q + 1:p, , drop = FALSE])))
-          }
-        }
-        if (p > 0 & q > 0) {
-          init.pars <- c(init.ma.pars, init.ar.pars)
-        } else if (p == 0) {
-          init.pars <- init.ma.pars
-        } else {
-          init.pars <- init.ar.pars
-        }
-      }
+      #   init.fit <- apply(y, 2, function(yy) {
+      #     arima(diffseries.mc(yy, curr.d),
+      #           order = c(p, 0, q), include.mean = FALSE, method = "ML")$coef
+      #   })
+      #
+      #
+      #   if (q > 0) {
+      #     if (tr) {
+      #       if (un) {
+      #         init.ma.pars <- logit((((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
+      #       } else {
+      #         init.ma.pars <- ((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf))))
+      #       }
+      #
+      #     } else {
+      #       init.ma.pars <- c(init.fit[1:q, , drop = FALSE])
+      #     }
+      #   }
+      #   if (p > 0) {
+      #     if (tr) {
+      #       if (un) {
+      #         init.ar.pars <- logit((((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
+      #       } else {
+      #         init.ar.pars <- ((c(apply(init.fit[q + 1:p, , drop = FALSE], 2, ar.pacf))))
+      #       }
+      #     } else {
+      #       init.ar.pars <- ((c(init.fit[q + 1:p, , drop = FALSE])))
+      #     }
+      #   }
+      #   if (p > 0 & q > 0) {
+      #     init.pars <- c(init.ma.pars, init.ar.pars)
+      #   } else if (p == 0) {
+      #     init.pars <- init.ma.pars
+      #   } else {
+      #     init.pars <- init.ar.pars
+      #   }
+      # }
+      init.pars <- opt.arma$par
 
       opt.arma <- optim(par = c(init.pars),
                         fn = fima.ll.auto.armaonly,
@@ -1018,9 +1042,19 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                         max.iter = max.iter, approx = approx, maxpacf = maxpacf)
 
       if (q == 0) {
-        thetaval <- matrix(0, nrow = 1, ncol = k)
+        pmcfval <- thetaval <- matrix(0, nrow = 1, ncol = k)
       } else {
         thetaval <- matrix(opt.arma$par[1:(k*q)], nrow = q, ncol = k)
+        if (tr) {
+          if (un) {
+            pmcfval <- matrix(expit((opt.arma$par[1:(k*q)]))*2 - 1, nrow = q, ncol = k)
+          } else {
+            pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+          }
+          thetaval <- -apply(pmcfval, 2, pacf.ar)
+        } else {
+          thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+        }
       }
 
       if (p == 0) {
@@ -1045,6 +1079,16 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       old.obj <- opt.arma$value
       objs <- c(objs, old.obj)
       count <- count + 1
+    }
+  } else {
+    if (is.null(d.start)) {
+      objs <- opt.d$objective
+    } else {
+      objs <- fima.ll.auto.donly(pars = d.start, y = y,
+                                 d.max = d.max, Covar = Covar,
+                                 whi = whi, exact = exact,
+                                 max.iter = max.iter,
+                                 approx = approx)
     }
   }
 
@@ -1180,7 +1224,16 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
         }
 
         if (q > 0) {
-          init.ma.pars <- rep(0, q) # c(init.fit[1:q, ])
+          if (tr) {
+            if (un) {
+              init.ma.pars <- logit((((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf)))) + 1)/2)
+            } else {
+              init.ma.pars <- ((c(apply(-init.fit[1:q, , drop = FALSE], 2, ar.pacf))))
+            }
+
+          } else {
+            init.ma.pars <- c(init.fit[1:q, , drop = FALSE])
+          }
         }
         if (p > 0) {
           if (tr) {
@@ -1203,18 +1256,18 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
 
         if (un) {
-          lower.ar <- rep(-Inf, k*p)
-          upper.ar <- rep(Inf, k*p)
+          lower.ma <- lower.ar <- rep(-Inf, k*p)
+          upper.ma <- upper.ar <- rep(Inf, k*p)
         } else {
-          lower.ar <- rep(-1, k*p)
-          upper.ar <- rep(1, k*p)
+          lower.ma <- lower.ar <- rep(-1, k*p)
+          upper.ma <- upper.ar <- rep(1, k*p)
         }
 
         opt.arma <- NULL
         try(opt.arma <- optim(par = init.pars,
                               fn = fima.ll.auto.armaonly,
-                              lower = c(rep(-Inf, k*q), lower.ar),
-                              upper = c(rep(Inf, k*q), upper.ar),
+                              lower = c(lower.ma, lower.ar),
+                              upper = c(upper.ma, upper.ar),
                               method = "L-BFGS-B",
                               y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                               control = list("fnscale" = -1, "factr" = factr), d = curr.d,
@@ -1229,11 +1282,28 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           pars[[which(curr.d == ds)]] <- opt.arma$par
 
           if (q == 0) {
-            thetaval <- matrix(0, nrow = 1, ncol = k)
+            pmcfval <- thetaval <- matrix(0, nrow = 1, ncol = k)
           } else {
-            thetaval <- matrix(opt.arma$par[1:(k*q)], nrow = q, ncol = k)
-            thetavals[[which(curr.d == ds)]] <- thetaval
-          }
+              if (tr) {
+                if (un) {
+                  pmcfval <- matrix(expit(opt.arma$par[1:(k*q)])*2 - 1, nrow = q, ncol = k)
+                } else {
+                  pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+                }
+                thetaval <- -apply(pmcfval, 2, pacf.ar)
+              } else {
+                thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+              }
+              thetavals[[which(curr.d == ds)]] <- thetaval
+              if (sum(abs(pmcfval) >= maxpacf) > 0) {
+                objs[which(curr.d == ds)] <- NA
+                upper.bound[which(curr.d == ds)] <- sum(pmcfval >= maxpacf) > 0
+                lower.bound[which(curr.d == ds)] <- sum(pmcfval <= -maxpacf) > 0
+              }
+              if (print.iter) {
+                cat("thetval=", thetaval, "\n")
+              }
+            }
 
 
           if (p == 0) {
