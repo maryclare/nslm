@@ -1080,7 +1080,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                                factr = 1e7, d.max.opt = d.max,
                                approx = FALSE,
                                maxpacf = 0.999,
-                               d.start = NULL) {
+                               d.start = NULL, rest.start = NULL) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -1188,7 +1188,11 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           #   }
           # })
           # init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
-          init.fit <- matrix(0, nrow = q + p, ncol = k)
+          if (curr.d == d.start & !is.na(rest.start)) {
+            init.fit <- matrix(c(rest.start), nrow = q + p, ncol = k)
+          } else {
+            init.fit <- matrix(0, nrow = q + p, ncol = k)
+          }
         }
 
         if (q > 0) {
