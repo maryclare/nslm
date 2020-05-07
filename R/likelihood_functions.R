@@ -815,7 +815,6 @@ fima.ll.auto.armaonly <- function(par,
                                   whi = FALSE,
                                   exact = TRUE, tr = TRUE, un = FALSE,
                                   max.iter = Inf, approx = FALSE, maxpacf = 0.999) {
-  cat("In fima.ll.auto.armaonly\n", par, "\n")
   par <- c(d, par)
   fima.ll.auto(par, y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                whi = whi, tr = tr, un = un, max.iter = max.iter, approx = approx,
@@ -913,7 +912,6 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       upper.ma <- rep(1, k*q)
     }
 
-    cat("Before fima.ll.auto.armaonly\n", init.pars, "\n")
     opt.arma <- optim(par = c(init.pars),
                       fn = fima.ll.auto.armaonly,
                       lower = c(lower.ma, lower.ar),
@@ -1236,7 +1234,6 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           lower.ma <- rep(-1, k*q)
           upper.ma <- rep(1, k*q)
         }
-        cat("Before fima.ll.auto.armaonly\n", init.pars, "\n")
         opt.arma <- NULL
         try(opt.arma <- optim(par = init.pars,
                               fn = fima.ll.auto.armaonly,
