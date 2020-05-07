@@ -809,12 +809,15 @@ fima.ll.auto.donly <- function(pars, y,
                max.iter = max.iter, approx = approx)
 }
 
-fima.ll.auto.armaonly <- function(pars, y, d.max = 1.5, Covar = NULL, d,
+fima.ll.auto.armaonly <- function(par,
+                                  y, d.max = 1.5, Covar = NULL, d,
                                   p = 0, q = 0,
-                                  whi = FALSE, exact = TRUE, tr = TRUE, un = FALSE,
+                                  whi = FALSE,
+                                  exact = TRUE, tr = TRUE, un = FALSE,
                                   max.iter = Inf, approx = FALSE, maxpacf = 0.999) {
-  pars <- c(d, pars)
-  fima.ll.auto(pars, y = y, d.max = d.max, Covar = Covar, q = q, p = p,
+  cat("In fima.ll.auto.armaonly\n", par, "\n")
+  par <- c(d, par)
+  fima.ll.auto(par, y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                whi = whi, tr = tr, un = un, max.iter = max.iter, approx = approx,
                maxpacf = maxpacf)
 }
@@ -910,13 +913,15 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       upper.ma <- rep(1, k*q)
     }
 
-    opt.arma <- optim(par = init.pars,
+    cat("Before fima.ll.auto.armaonly\n", init.pars, "\n")
+    opt.arma <- optim(par = c(init.pars),
                       fn = fima.ll.auto.armaonly,
                       lower = c(lower.ma, lower.ar),
-                      upper = c(lower.ma, upper.ar),
+                      upper = c(upper.ma, upper.ar),
                       method = "L-BFGS-B",
                       y = y, d.max = d.max, Covar = Covar, q = q, p = p,
-                      control = list("fnscale" = -1, "factr" = factr), d = curr.d,
+                      control = list("fnscale" = -1, "factr" = factr),
+                      d = curr.d,
                       whi = whi, exact = exact, tr = tr, un = un,
                       max.iter = max.iter,
                       approx = approx, maxpacf = maxpacf)
@@ -999,7 +1004,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       opt.arma <- optim(par = c(init.pars),
                         fn = fima.ll.auto.armaonly,
                         lower = c(lower.ma, lower.ar),
-                        upper = c(lower.ma, upper.ar),
+                        upper = c(upper.ma, upper.ar),
                         method = "L-BFGS-B",
                         y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                         control = list("fnscale" = -1, "factr"=factr), d = curr.d,
@@ -1231,7 +1236,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           lower.ma <- rep(-1, k*q)
           upper.ma <- rep(1, k*q)
         }
-
+        cat("Before fima.ll.auto.armaonly\n", init.pars, "\n")
         opt.arma <- NULL
         try(opt.arma <- optim(par = init.pars,
                               fn = fima.ll.auto.armaonly,
