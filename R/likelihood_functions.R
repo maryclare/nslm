@@ -1188,7 +1188,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
           #   }
           # })
           # init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
-          if (curr.d == d.start & !is.na(rest.start)) {
+          if (curr.d == d.start & !is.null(rest.start)) {
             init.fit <- matrix(c(rest.start), nrow = q + p, ncol = k)
           } else {
             init.fit <- matrix(0, nrow = q + p, ncol = k)
@@ -1295,7 +1295,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                 pacfval <- matrix((opt.arma$par[k*q + 1:(k*p)]), nrow = p, ncol = k)
               }
               phival <- apply(pacfval, 2, pacf.ar)
-              if (sum(abs(pacfval) >= maxpacf) > 0) {
+              if (!whi & sum(abs(pacfval) >= maxpacf) > 0) {
                 objs[which(curr.d == ds)] <- NA
                 upper.bound[which(curr.d == ds)] <- sum(pacfval >= maxpacf) > 0
                 lower.bound[which(curr.d == ds)] <- sum(pacfval <= -maxpacf) > 0
