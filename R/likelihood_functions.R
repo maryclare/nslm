@@ -490,7 +490,8 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          tr = TRUE,
                          un = FALSE, max.iter = Inf, approx = FALSE,
                          maxpacf = 0.999,
-                         offset = rep(0, length(y) - d.max + 0.5), scale = 1) {
+                         offset = matrix(0, nrow = nrow(y) - d.max + 0.5,
+                                         ncol = ncol(y)), scale = 1) {
 
   # print(round(pars, 5))
   if (is.matrix(y)) {
@@ -537,7 +538,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
   for (j in 1:k) {
     if (d.max == 0.5) {
       z <- na.omit(y[, j])
-      z <- (z - offset)/scale
+      z <- (z - offset[, j])/scale
       if (d <= 0.5 & d >= -0.5) {
         dfr <- d
         newthe <- theta[, j]
@@ -569,7 +570,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       }
     } else if (d.max == 1.5) {
       z <- na.omit(y[-1, j] - y[-nrow(y), j])
-      z <- (z - offset)/scale
+      z <- (z - offset[, j])/scale
       if (!is.null(Covar)) {
         Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
         Covar <- Covar[, !(apply(Covar, 2, min) == 0 & apply(Covar, 2, max) == 0), drop = FALSE]
@@ -623,7 +624,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
     } else if (d.max == 2.5) {
       z <- y[-1, j] - y[-nrow(y), j]
       z <- na.omit(z[-1] - z[-length(z)])
-      z <- (z - offset)/scale
+      z <- (z - offset[, j])/scale
       if (!is.null(Covar)) {
         Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
         Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
@@ -689,7 +690,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       z <- y[-1, j] - y[-nrow(y), j]
       z <- na.omit(z[-1] - z[-length(z)])
       z <- na.omit(z[-1] - z[-length(z)])
-      z <- (z - offset)/scale
+      z <- (z - offset[, j])/scale
       if (!is.null(Covar)) {
         Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
         Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
