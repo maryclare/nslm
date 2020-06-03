@@ -806,6 +806,7 @@ fima.ll.auto.donly <- function(pars, y,
   } else {
     p <- 0
   }
+
   fima.ll.auto(pars, y = y, d.max = d.max, Covar = Covar, q = q, p = p, whi = whi,
                max.iter = max.iter, approx = approx)
 }
@@ -963,9 +964,9 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     count <- 0
 
     while (!d.fix & abs(diff) > eps) {
-
       conv <- 1
-      if (!d.fix & !exact & count > 1) {
+      if (!d.fix) {
+
         opt.d <- optim(par = curr.d,
                        fn = fima.ll.auto.donly,
                        lower = d.min,
