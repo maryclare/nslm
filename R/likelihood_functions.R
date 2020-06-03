@@ -499,7 +499,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
   } else {
     k <- 1
     y <- matrix(y, nrow = length(y), ncol = 1)
-    offset <- matrix(offset, nrow = length(y), ncol = 1)
+    offset <- matrix(offset, nrow = length(offset), ncol = 1)
   }
   d <- pars[1]
   if (q > 0) {
