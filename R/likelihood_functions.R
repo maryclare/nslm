@@ -329,6 +329,7 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
   }
 }
 
+#' @export
 diffseries.mc <- function(z, d) {
   n <- length(z)
   dz <- bs <- numeric(length(z))
@@ -351,7 +352,7 @@ diffseries.mc <- function(z, d) {
 # Function that computes the log likelihood of an ARFIMA(p, d, q) proces
 #' @export
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                     whi = FALSE, exact = TRUE, just.logl = TRUE, max.iter = Inf,
+                     whi = FALSE, just.logl = TRUE, max.iter = Inf,
                      approx = FALSE) {
 
   if (approx) {
@@ -366,14 +367,16 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
 
   if (whi) {
-    logl <- whi.ll(z = z, theta = theta, dfrac = dfrac, Covar = Covar, phi = phi,
+    logl <- whi.ll(z = z, theta = theta, dfrac = dfrac,
+                   Covar = Covar, phi = phi,
                    just.logl = just.logl)
 
     if (just.logl) {
       return(logl)
     } else {
-      return(list("logl" = logl$logl, "sse" = logl$sse, "beta" = logl$beta,
-                  "fitted" = logl$fitted))
+      return(list("logl" = logl$logl,
+                  "sse" = logl$sse,
+                  "beta" = logl$beta))
     }
   } else {
 
@@ -405,13 +408,9 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     if (just.logl) {
       return(logl)
     } else {
-      if (!is.null(Covar)) {
-        fitted <- Covar%*%beta
-      } else {
-        fitted <- rep(0, length(z))
-      }
-      return(list("logl" = logl, "sse" = sse/(n*acv$var), "beta" = beta,
-                  "fitted" = fitted))
+      return(list("logl" = logl,
+                  "sse" = sse/(n*acv$var),
+                  "beta" = beta))
     }
   }
 }
@@ -426,11 +425,9 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   if (!is.null(Covar)) {
     linmod <- lm(z~Covar-1)
     z <- linmod$residuals
-    fitted <- linmod$fitted
     beta <- linmod$coef
     sse <- summary(linmod)$sigma^2
   } else {
-    fitted <- mean(z)
     sse <- var(z)
     z <- (z - mean(z))/sd(z)
     beta <- NULL
@@ -470,13 +467,7 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   if (just.logl) {
     return(logl)
   } else {
-    if (!is.null(Covar)) {
-      fitted <- linmod$fitted
-    } else {
-      fitted <- rep(0, length(z))
-    }
-    return(list("logl" = logl, "sse" = sse, "beta" = beta,
-                "fitted" = fitted))
+    return(list("logl" = logl, "sse" = sse, "beta" = beta))
   }
 }
 
@@ -488,7 +479,8 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          whi = FALSE,
                          just.logl = TRUE,
                          tr = TRUE,
-                         un = FALSE, max.iter = Inf, approx = FALSE,
+                         un = FALSE, max.iter = Inf,
+                         approx = FALSE,
                          maxpacf = 0.999,
                          offset = matrix(0, nrow = nrow(y) - d.max + 0.5,
                                          ncol = ncol(y)), scale = rep(1, ncol(y))) {
@@ -540,6 +532,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
     if (d.max == 0.5) {
       z <- na.omit(y[, j])
       z <- (z - offset[, j])/scale[j]
+      Covar.diff <- Covar
       if (d <= 0.5 & d >= -0.5) {
         dfr <- d
         newthe <- theta[, j]
@@ -573,18 +566,26 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       z <- na.omit(y[-1, j] - y[-nrow(y), j])
       z <- (z - offset[, j])/scale[j]
       if (!is.null(Covar)) {
-        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
-        Covar <- Covar[, !(apply(Covar, 2, min) == 0 & apply(Covar, 2, max) == 0), drop = FALSE]
-        if (ncol(Covar) == 0) {
-          Covar <- NULL
+        Covar.diff <- Covar[-1, , drop = FALSE] -
+          Covar[-nrow(Covar), , drop = FALSE]
+        Covar.diff <- Covar.diff[,
+                                 !(apply(Covar.diff, 2, min) == 0 &
+                                     apply(Covar.diff, 2, max) == 0),
+                                 drop = FALSE]
+        if (ncol(Covar.diff) == 0) {
+          Covar.diff <- NULL
         }
+      } else {
+        Covar.diff <- Covar
       }
       if (d <= 1.5 & d >= 0.5) {
         dfr <- d - 1
         newthe <- theta[, j]
         ll <- fima.ll(z,
-                      dfrac = dfr, Covar = Covar, theta = newthe,
-                      phi = phi[, j], whi = whi, just.logl = just.logl,
+                      dfrac = dfr, Covar = Covar.diff,
+                      theta = newthe,
+                      phi = phi[, j], whi = whi,
+                      just.logl = just.logl,
                       max.iter = max.iter, approx = approx)
       } else if (d < 0.5 & d >= -0.5) {
 
@@ -594,31 +595,33 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
-        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -2, 1)), 1, prod)
+        tvals <- apply(expand.grid(c(1, theta[, j]),
+                                   c(1, -2, 1)), 1, prod)
         pows$pow <- rowSums(pows)
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
 
         dfr <- d + 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
-        tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -3, 3, -1)), 1, prod)
+        tvals <- apply(expand.grid(c(1, theta[, j]),
+                                   c(1, -3, 3, -1)), 1, prod)
         pows$pow <- rowSums(pows)
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
 
         dfr <- d + 2
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       }
@@ -627,18 +630,24 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       z <- na.omit(z[-1] - z[-length(z)])
       z <- (z - offset[, j])/scale[j]
       if (!is.null(Covar)) {
-        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
-        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
-        Covar <- Covar[, !(apply(Covar, 2, min) == 0 & apply(Covar, 2, max) == 0), drop = FALSE]
-        if (ncol(Covar) == 0) {
-          Covar <- NULL
+        Covar.diff <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
+        Covar.diff <- Covar.diff[-1, , drop = FALSE] -
+          Covar.diff[-nrow(Covar.diff), , drop = FALSE]
+        Covar.diff <- Covar[,
+                            !(apply(Covar.diff, 2, min) == 0 &
+                                apply(Covar.diff, 2, max) == 0),
+                            drop = FALSE]
+        if (ncol(Covar.diff) == 0) {
+          Covar.diff <- NULL
         }
+      } else {
+        Covar.diff <- Covar
       }
       if (d <= 2.5 & d >= 1.5) {
         dfr <- d - 2
         newthe <- theta[, j]
         ll <- fima.ll(z,
-                      dfrac = dfr, Covar = Covar,
+                      dfrac = dfr, Covar = Covar.diff,
                       phi = phi[, j], theta = newthe, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
@@ -650,7 +659,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d - 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < 0.5 & d >= -0.5) {
@@ -661,7 +670,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
-                      Covar = Covar, whi = whi, just.logl = just.logl,
+                      Covar = Covar.diff, whi = whi, just.logl = just.logl,
                       max.iter = max.iter,
                       approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
@@ -672,7 +681,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d + 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
@@ -683,7 +692,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d + 2
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       }
@@ -693,19 +702,26 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       z <- na.omit(z[-1] - z[-length(z)])
       z <- (z - offset[, j])/scale[j]
       if (!is.null(Covar)) {
-        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
-        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
-        Covar <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
-        Covar <- Covar[, !(apply(Covar, 2, min) == 0 & apply(Covar, 2, max) == 0), drop = FALSE]
-        if (ncol(Covar) == 0) {
-          Covar <- NULL
+        Covar.diff <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
+        Covar.diff <- Covar.diff[-1, , drop = FALSE] -
+          Covar.diff[-nrow(Covar.diff), , drop = FALSE]
+        Covar.diff <- Covar.diff[-1, , drop = FALSE] -
+          Covar.diff[-nrow(Covar.diff), , drop = FALSE]
+        Covar.diff <- Covar.diff[,
+                                 !(apply(Covar.diff, 2, min) == 0 &
+                                     apply(Covar.diff, 2, max) == 0),
+                                 drop = FALSE]
+        if (ncol(Covar.diff) == 0) {
+          Covar.diff <- NULL
         }
+      } else {
+        Covar.diff <- Covar
       }
       if (d <= 3.5 & d >= 2.5) {
         dfr <- d - 3
         newthe <- theta[, j]
         ll <- fima.ll(z,
-                      dfrac = dfr, Covar = Covar,
+                      dfrac = dfr, Covar = Covar.diff,
                       phi = phi[, j], theta = newthe, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
@@ -717,7 +733,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d - 2
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < 1.5 & d >= 0.5) {
@@ -728,7 +744,8 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d - 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
-                      Covar = Covar, whi = whi, just.logl = just.logl,
+                      Covar = Covar.diff, whi = whi,
+                      just.logl = just.logl,
                       max.iter = max.iter,
                       approx = approx)
       } else if (d < 0.5 & d >= -0.5) {
@@ -739,7 +756,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
@@ -750,7 +767,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d + 1
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
@@ -761,7 +778,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
         dfr <- d + 2
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
-                      phi = phi[, j], Covar = Covar, whi = whi,
+                      phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
                       approx = approx)
       }
@@ -772,18 +789,22 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       phis[[j]] <- phi[, j]
       thetas[[j]] <- newthe
       lls[j] <- ll$logl
-      if (!is.null(Covar)) {
-        betas[(nrow(betas) - length(ll$beta) + 1):nrow(betas), j] <- ll$beta
+      if (!is.null(Covar.diff)) {
+        betas[(nrow(betas) - length(ll$beta) + 1):nrow(betas),
+              j] <- ll$beta
       }
-      fits[(nrow(fits) - length(ll$fitted) + 1):nrow(fits), j] <- ll$fitted
       sses[j] <- ll$sse
     }
   }
   if (just.logl) {
     return(sum(lls))
+  } else if (!is.null(Covar.diff)) {
+    return(list("lls" = lls, "betas" = betas, "sses" = sses,
+                "dfr" = dfr, "phis" = phis, "theta" = thetas,
+                "Covar.diff" = Covar.diff))
   } else {
-    return(list("lls" = lls, "betas" = betas, "sses" = sses, "fits" = fits,
-                "dfr" = dfr, "phis" = phis, "theta" = thetas, "Covar" = Covar))
+    return(list("lls" = lls, "sses" = sses,
+                "dfr" = dfr, "phis" = phis, "theta" = thetas))
   }
 }
 
@@ -791,7 +812,7 @@ fima.ll.auto.donly <- function(pars, y,
                                d.max = 1.5,
                                Covar = NULL,
                                ar = NULL, ma = NULL,
-                               whi = FALSE, exact = TRUE,
+                               whi = FALSE,
                                max.iter = Inf,
                                approx = FALSE) {
   pars <- pars
@@ -816,7 +837,7 @@ fima.ll.auto.armaonly <- function(par,
                                   y, d.max = 1.5, Covar = NULL, d,
                                   p = 0, q = 0,
                                   whi = FALSE,
-                                  exact = TRUE, tr = TRUE, un = FALSE,
+                                  tr = TRUE, un = FALSE,
                                   max.iter = Inf, approx = FALSE, maxpacf = 0.999) {
   par <- c(d, par)
   fima.ll.auto(par, y = y, d.max = d.max, Covar = Covar, q = q, p = p,
@@ -825,10 +846,12 @@ fima.ll.auto.armaonly <- function(par,
 }
 
 #' @export
-fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
+fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL,
+                                   p = 0, q = 0,
                                    eps = 10^(-7),
-                                   print.iter = FALSE, whi = FALSE,
-                                   exact = TRUE, d.min = -1.5,
+                                   print.iter = FALSE,
+                                   whi = FALSE,
+                                   d.min = -1.5,
                                    d.fix = FALSE,
                                    d.start = NULL,
                                    rest.start = NULL,
@@ -851,7 +874,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                       interval = c(d.min, d.max.opt),
                       y = y, maximum = TRUE,
                       tol = .Machine$double.eps, d.max = d.max, Covar = Covar,
-                      whi = whi, exact = exact, max.iter = max.iter,
+                      whi = whi, max.iter = max.iter,
                       approx = approx)
     curr.d <- opt.d$maximum
   } else {
@@ -862,8 +885,13 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 
     if (is.null(rest.start)) {
     init.fit <- apply(y, 2, function(yy) {
+      if (!is.null(Covar)) {
       arima(diffseries.mc(lm(yy~Covar-1)$residuals, curr.d),
             order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
+      } else {
+        arima(diffseries.mc(yy, curr.d),
+              order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
+      }
     })
       init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
     } else {
@@ -923,7 +951,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                       y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                       control = list("fnscale" = -1, "factr" = factr),
                       d = curr.d,
-                      whi = whi, exact = exact, tr = tr, un = un,
+                      whi = whi, tr = tr, un = un,
                       max.iter = max.iter,
                       approx = approx, maxpacf = maxpacf)
 
@@ -976,7 +1004,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                        y = y, d.max = d.max, Covar = Covar,
                        ar = phival, ma = thetaval,
                        control = list("fnscale" = -1, "factr"=factr),
-                       whi = whi, exact = exact,
+                       whi = whi,
                        max.iter = max.iter, approx = approx)
         conv <- opt.d$convergence
       }
@@ -988,7 +1016,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                           maximum = TRUE,
                           tol = .Machine$double.eps, d.max = d.max,
                           Covar = Covar, ar = phival, ma = thetaval,
-                          whi = whi, exact = exact,
+                          whi = whi,
                           max.iter = max.iter, approx = approx)
         curr.d <- opt.d$maximum
         obj.val <- opt.d$objective
@@ -1009,7 +1037,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                         method = "L-BFGS-B",
                         y = y, d.max = d.max, Covar = Covar, q = q, p = p,
                         control = list("fnscale" = -1, "factr"=factr), d = curr.d,
-                        whi = whi, exact = exact, tr = tr, un = un,
+                        whi = whi, tr = tr, un = un,
                         max.iter = max.iter, approx = approx, maxpacf = maxpacf)
 
       if (q == 0) {
@@ -1057,7 +1085,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     } else {
       objs <- fima.ll.auto.donly(pars = d.start, y = y,
                                  d.max = d.max, Covar = Covar,
-                                 whi = whi, exact = exact,
+                                 whi = whi,
                                  max.iter = max.iter,
                                  approx = approx)
     }
@@ -1075,11 +1103,13 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 }
 
 #' @export
-fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
+fima.ll.auto.exact <- function(y, d.max = 1.5,
+                               Covar = NULL, p = 0, q = 0,
                                eps = 10^(-7),
                                print.iter = FALSE, whi = FALSE,
                                d.min = -1.5,
-                               tr = TRUE, by.val = 0.1, un = FALSE, max.iter = Inf,
+                               tr = TRUE, by.val = 0.1,
+                               un = FALSE, max.iter = Inf,
                                factr = 1e7, d.max.opt = d.max,
                                approx = FALSE,
                                maxpacf = 0.999,
@@ -1092,7 +1122,12 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
     y <- matrix(y, nrow = length(y), ncol = 1)
   }
 
-  ds <- seq(d.min, d.max.opt, by = by.val)
+  if (is.null(d.start)) {
+    ds <- seq(d.min, d.max.opt, by = by.val)
+  } else {
+    ds <- unique(c(-rev(seq(-d.start, -d.min, by = by.val)),
+                   seq(d.start, d.max.opt, by.val)))
+  }
   ds[length(ds)] <- ds[length(ds)]
   sses <- objs <- rep(NA, length(ds))
   upper.bound <- lower.bound <- rep(FALSE, length(ds))
@@ -1252,7 +1287,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
                               control = list("fnscale" = -1,
                                              "factr" = factr),
                               d = curr.d,
-                              whi = whi, exact = exact,
+                              whi = whi,
                               tr = tr, un = un,
                               max.iter = max.iter, approx = approx,
                               maxpacf = maxpacf))
@@ -1339,7 +1374,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
       objs[which(curr.d == ds)] <- fima.ll.auto.donly(pars = curr.d,
                                                       y = y,
                                                       d.max = d.max, Covar = Covar,
-                                                      whi = whi, exact = exact,
+                                                      whi = whi,
                                                       max.iter = max.iter,
                                                       approx = approx)
     }
@@ -1366,13 +1401,28 @@ fima.ll.auto.exact <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
 #' @export
 comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
                     p, q) {
+
+  if (is.matrix(y)) {
+    k <- ncol(y)
+  } else {
+    k <- 1
+    y <- matrix(y, nrow = length(y), ncol = 1)
+  }
+
   if (!is.null(Covar.diff)) {
-    beta <- pars[1:ncol(Covar.diff)]
-    rest <- pars[(ncol(Covar.diff) + 1):length(pars)]
-    off <-  c(Covar.diff%*%beta)
+    beta <- pars[1:(ncol(Covar.diff)*ncol(y))]
+    rest <- pars[(ncol(Covar.diff)*ncol(y) + 1):length(pars)]
+    off <- matrix(nrow = nrow(Covar.diff), ncol = ncol(y))
+    for (j in 1:ncol(off)) {
+      off[, j] <-  c(Covar.diff%*%matrix(beta,
+                                         nrow = ncol(Covar.diff),
+                                         ncol = ncol(y))[, j])
+    }
+
   } else {
     rest <- pars
-    off <- rep(0, length(y) - d.max + 0.5)
+    off <- matrix(0, nrow = nrow(y) - d.max + 0.5,
+                  ncol = k)
   }
   fima.ll.auto(y = y, d.max = d.max,
                Covar = Covar, whi = whi,
@@ -1386,25 +1436,89 @@ comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
 comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps) {
 
   get.val <- fima.ll.auto(y = y, d.max = d.max,
-                          Covar = Covar, whi = whi, par = opt.obj$pars,
+                          Covar = Covar, whi = whi,
+                          par = opt.obj$pars,
                           just.logl = FALSE, p = p, q = q)
-
-  H <- fdHess(pars = c(c(na.omit(get.val$betas)), opt.obj$pars),
+  pars <- opt.obj$pars
+  if ("Covar.diff" %in% names(get.val)) {
+    pars <- c(c(na.omit(get.val$betas)), pars)
+    Covar.diff <- get.val$Covar.diff
+  } else {
+    Covar.diff <- NULL
+  }
+  H <- fdHess(pars = pars,
                   comp.ll,
                   y = y,
                   d.max = d.max,
                   Covar = Covar, whi = whi,
-                  Covar.diff = get.val$Covar,
-                  sse = get.val$sses, p = p, q = q, .relStep = eps)$Hessian
+                  Covar.diff = Covar.diff,
+                  sse = get.val$sses, p = p, q = q,
+              .relStep = eps)$Hessian
   return(H)
 }
 
-# fima.ll.auto.mcmc <- function(y, d.max = 1.5, Covar = NULL, p = 0, q = 0,
-#                               print.iter = FALSE, whi = FALSE,
-#                               exact = TRUE, d.min = -1.5,
-#                               samps = 1000) {
-#
-#
-# }
+comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
+                    q = 0, whi = FALSE,
+                    eps = .Machine$double.eps^(1/3)) {
+
+  eps.start <- eps
+
+  eps <- eps.start
+  stop <- FALSE; count <- 1
+  while (!stop & count <= 100) {
+    if ((opt$pars + 2*eps <= d.max) & (opt$pars - 2*eps >= -1.5)) {
+      diff <- (-fima.ll.auto(pars = opt$pars + 2*eps,
+                                y = y, d.max = d.max,
+                                Covar = Covar, whi = whi) +
+                    16*fima.ll.auto(pars = opt$pars + eps,
+                                    y = y, d.max = d.max,
+                                    Covar = Covar, whi = whi) -
+                    30*fima.ll.auto(pars = opt$pars,
+                                    y = y, d.max = d.max,
+                                    Covar = Covar, whi = whi) +
+                    16*fima.ll.auto(pars = opt$pars - eps,
+                                    y = y, d.max = d.max,
+                                    Covar = Covar, whi = whi) -
+                    fima.ll.auto(pars = opt$pars - 2*eps,
+                                 y = y, d.max = d.max,
+                                 Covar = Covar, whi = whi))/(12*eps^2)
+      stop <- TRUE
+    } else {
+      cat("Repeat\n")
+      count <- count + 1
+      eps <- .Machine$double.eps^(count/3)
+    }
+  }
+  s <- sqrt(-diff^(-1)/(length(y) - (d.max - 0.5) - p - q))
+
+  if (is.na(s)) {
+  eps <- eps.start
+  stop <- FALSE; count <- 1;
+  while (!stop & count <= 100) {
+    if ((opt$pars + eps <= d.max) & (opt$pars - eps >= -1.5)) {
+      diff <- (fima.ll.auto(pars = opt$pars + eps,
+                               y = y, d.max = d.max,
+                               Covar = Covar, whi = whi) -
+                    2*fima.ll.auto(pars = opt$pars,
+                                   y = y, d.max = d.max,
+                                   Covar = Covar, whi = whi) +
+                    fima.ll.auto(pars = opt$pars - eps,
+                                 y = y, d.max = d.max,
+                                 Covar = Covar, whi = whi))/(eps^2)
+      stop <- TRUE
+    } else {
+      cat("Repeat\n")
+      count <- count + 1
+      eps <- .Machine$double.eps^(count/3)
+    }
+
+  }
+
+  s <-  sqrt(-diff[2]^(-1)/(length(y) - (d.max - 0.5) - p - q))
+  }
+
+  return(s)
+
+}
 
 
