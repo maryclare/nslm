@@ -3,6 +3,7 @@
 export(arfima.acv)
 export(comp.hessian)
 export(comp.ll)
+export(diffseries.mc)
 export(fima.ll)
 export(fima.ll.auto)
 export(fima.ll.auto.exact)

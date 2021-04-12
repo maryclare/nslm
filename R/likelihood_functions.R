@@ -533,7 +533,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
       z <- na.omit(y[, j])
       z <- (z - offset[, j])/scale[j]
       Covar.diff <- Covar
-      if (d <= 0.5 & d >= -0.5) {
+      if (approx | (!approx & d <= 0.5 & d >= -0.5)) {
         dfr <- d
         newthe <- theta[, j]
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
