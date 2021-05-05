@@ -349,7 +349,7 @@ diffseries.mc <- function(z, d) {
   return(dz)
 }
 
-# Function that computes the log likelihood of an ARFIMA(p, d, q) proces
+# Function that computes the log likelihood of an ARFIMA(p, d, q) process
 #' @export
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
                      whi = FALSE, just.logl = TRUE, max.iter = Inf,
@@ -1400,7 +1400,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
 
 #' @export
 comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
-                    p, q) {
+                    p, q, approx) {
 
   if (is.matrix(y)) {
     k <- ncol(y)
@@ -1429,16 +1429,16 @@ comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
                offset = off,
                scale = sqrt(sse),
                just.logl = TRUE,
-               pars = rest, p = p, q = q)
+               pars = rest, p = p, q = q, approx = approx)
 }
 
 #' @export
-comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps) {
+comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps, approx) {
 
   get.val <- fima.ll.auto(y = y, d.max = d.max,
                           Covar = Covar, whi = whi,
                           par = opt.obj$pars,
-                          just.logl = FALSE, p = p, q = q)
+                          just.logl = FALSE, p = p, q = q, approx = approx)
   pars <- opt.obj$pars
   if ("Covar.diff" %in% names(get.val)) {
     pars <- c(c(na.omit(get.val$betas)), pars)
@@ -1453,7 +1453,7 @@ comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps) {
                   Covar = Covar, whi = whi,
                   Covar.diff = Covar.diff,
                   sse = get.val$sses, p = p, q = q,
-              .relStep = eps)$Hessian
+              .relStep = eps, approx = approx)$Hessian
   return(H)
 }
 
