@@ -62,6 +62,7 @@ gamma.stirling.ratio <- function(x, y) {
 }
 
 adj.durbin <- function(Z, r) {
+  problem <- FALSE
   E <- matrix(NA, nrow(Z), ncol(Z))
   v <- rep(NA, length(r))
   E[1, ] <- Z[1, ]
@@ -71,6 +72,10 @@ adj.durbin <- function(Z, r) {
   v[1] <- r[2]
   for (k in 2:length(r)) {
     beta <- (1 - alpha^2)*beta
+    if (is.nan(beta) | beta <= 0) {
+      problem <- TRUE
+      break
+    }
     lbeta.sum <- lbeta.sum + log(beta)
     # E[k, ] <- (Z[k, ] - apply(Z, 2, function(z) {sum(z[1:(k-1)]*v[(k-1):1])}))/sqrt(beta)
     E[k, ] <- (Z[k, ] - colSums(Z[1:(k-1), , drop = FALSE]*v[(k-1):1]))/sqrt(beta)
@@ -82,7 +87,11 @@ adj.durbin <- function(Z, r) {
       v[1:(k-1)] <- v[1:(k-1)] - alpha*v[(k-1):1]
     }
   }
-  return(list("E" = E, "lbeta.sum" = lbeta.sum))
+  if (!problem) {
+    return(list("E" = E, "lbeta.sum" = lbeta.sum))
+  } else {
+    return(list("E" = NA, "lbeta.sum" = NA))
+  }
 }
 
 # for specified arguments ks
@@ -353,7 +362,7 @@ diffseries.mc <- function(z, d) {
 #' @export
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
                      whi = FALSE, just.logl = TRUE, max.iter = Inf,
-                     approx = FALSE) {
+                     approx = FALSE, correct.r = FALSE) {
 
   if (approx) {
     z <- diffseries.mc(z, dfrac)
@@ -393,6 +402,13 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
       Z <- cbind(z, Covar)
     }
     ad <- adj.durbin(Z = Z, r = r)
+    if (correct.r & is.na(ad$lbeta.sum)) {
+      R <- matrix(r[c(abs(outer(1:length(r), 1:length(r), "-")) + 1)], nrow = length(r), ncol = length(r))
+      eR <- eigen(R)
+      eps <- 10^(-10)
+      r <- (eR$vectors[1, ]*ifelse(eR$values > eps, eR$values, eps))%*%t(eR$vectors)
+      ad <- adj.durbin(Z = Z, r = r)
+    }
     if (is.null(Covar)) {
       sse <- sum(ad$E^2)
       beta <- NULL
@@ -483,7 +499,8 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          approx = FALSE,
                          maxpacf = 0.999,
                          offset = matrix(0, nrow = nrow(y) - d.max + 0.5,
-                                         ncol = ncol(y)), scale = rep(1, ncol(y))) {
+                                         ncol = ncol(y)), scale = rep(1, ncol(y)),
+                         correct.r = FALSE) {
 
   # print(round(pars, 5))
   if (is.matrix(y)) {
@@ -538,7 +555,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- theta[, j]
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
                       Covar = Covar, whi = whi, just.logl = just.logl,
-                      max.iter = max.iter, approx = approx)
+                      max.iter = max.iter, approx = approx, correct.r = correct.r)
       } else if (d < -0.5 & d >= -1.5) {
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
         tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -1)), 1, prod)
@@ -549,7 +566,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, phi = phi[, j],
                       theta = newthe, Covar = Covar, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -1.5 & d >= -2.5) {
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
         tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -2, 1)), 1, prod)
@@ -560,7 +577,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, phi = phi[, j],
                       theta = newthe, Covar = Covar, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       }
     } else if (d.max == 1.5) {
       z <- na.omit(y[-1, j] - y[-nrow(y), j])
@@ -586,7 +603,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       theta = newthe,
                       phi = phi[, j], whi = whi,
                       just.logl = just.logl,
-                      max.iter = max.iter, approx = approx)
+                      max.iter = max.iter, approx = approx, correct.r = correct.r)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -597,7 +614,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -610,7 +627,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -623,7 +640,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       }
     } else if (d.max == 2.5) {
       z <- y[-1, j] - y[-nrow(y), j]
@@ -650,7 +667,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       dfrac = dfr, Covar = Covar.diff,
                       phi = phi[, j], theta = newthe, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < 1.5 & d >= 0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -661,7 +678,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -672,7 +689,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
                       Covar = Covar.diff, whi = whi, just.logl = just.logl,
                       max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -683,7 +700,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:4))
@@ -694,7 +711,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       }
     } else if (d.max == 3.5) {
       z <- y[-1, j] - y[-nrow(y), j]
@@ -724,7 +741,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       dfrac = dfr, Covar = Covar.diff,
                       phi = phi[, j], theta = newthe, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < 2.5 & d >= 1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -735,7 +752,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < 1.5 & d >= 0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -747,7 +764,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       Covar = Covar.diff, whi = whi,
                       just.logl = just.logl,
                       max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -758,7 +775,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:4))
@@ -769,7 +786,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:5))
@@ -780,7 +797,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx)
+                      approx = approx, correct.r = correct.r)
       }
     }
     if (just.logl) {
