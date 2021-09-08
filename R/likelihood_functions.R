@@ -1,3 +1,32 @@
+#' @export
+arfima.specden <- function(frs, phi = 0, theta = 0, dfrac = 0, sig.sq = 1) {
+
+  far <- fma <- rep(1, length(frs))
+  p <- length(phi)
+  q <- length(theta)
+  if (!(sum(phi == 0) == p)) {
+
+    cosar <- cos(cbind(frs)%*%rbind(1:p))
+    sinar <- sin(cbind(frs)%*%rbind(1:p))
+    Rar <- cosar%*%phi
+    Iar <- sinar%*%phi
+    far <- (1 - Rar)^2 + Iar^2
+
+  }
+  if (!(sum(theta == 0) == q)) {
+
+    cosma <- cos(cbind(frs)%*%rbind(1:q))
+    sinma <- sin(cbind(frs)%*%rbind(1:q))
+    Rma <- cosma%*%(-theta)
+    Ima <- sinma%*%(-theta)
+    fma <- (1 - Rma)^2 + Ima^2
+
+  }
+
+  return(sig.sq*(fma/far)*sqrt((1 - cos(frs))^2 + sin(frs)^2)^(-2*dfrac)/(2*pi))
+
+}
+
 pacf.ar <- function(pa) {
   p <- length(pa)
   if (p == 0) {
@@ -362,7 +391,7 @@ diffseries.mc <- function(z, d) {
 #' @export
 fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
                      whi = FALSE, just.logl = TRUE, max.iter = Inf,
-                     approx = FALSE, correct.r = FALSE) {
+                     approx = FALSE) {
 
   if (approx) {
     z <- diffseries.mc(z, dfrac)
@@ -402,13 +431,6 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
       Z <- cbind(z, Covar)
     }
     ad <- adj.durbin(Z = Z, r = r)
-    if (correct.r & is.na(ad$lbeta.sum)) {
-      R <- matrix(r[c(abs(outer(1:length(r), 1:length(r), "-")) + 1)], nrow = length(r), ncol = length(r))
-      eR <- eigen(R)
-      eps <- 10^(-10)
-      r <- (eR$vectors[1, ]*ifelse(eR$values > eps, eR$values, eps))%*%t(eR$vectors)
-      ad <- adj.durbin(Z = Z, r = r)
-    }
     if (is.null(Covar)) {
       sse <- sum(ad$E^2)
       beta <- NULL
@@ -442,44 +464,21 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     linmod <- lm(z~Covar-1)
     z <- linmod$residuals
     beta <- linmod$coef
-    sse <- summary(linmod)$sigma^2
   } else {
-    sse <- var(z)
-    z <- (z - mean(z))/sd(z)
+    z <- (z - mean(z))
     beta <- NULL
   }
-  periodogram <- (Mod(fft(z))^2/(2*pi*n))[1:(n%/%2 + 1)]
-  per <- periodogram[2:(m + 1)]
+  periodogram <- (Mod(fft(z))^2/(n*2*pi))[2:(m + 1)]
 
   frs <- (2*pi/n)*(1:m)
 
-  far <- fma <- rep(1, m)
-  p <- length(phi)
-  q <- length(theta)
-  if (!(sum(phi == 0) == p)) {
+  fsp <- arfima.specden(frs = frs, phi = phi, theta = theta, dfrac = dfrac)
 
-    cosar <- cos(cbind(frs)%*%rbind(1:p))
-    sinar <- sin(cbind(frs)%*%rbind(1:p))
-    Rar <- cosar%*%phi
-    Iar <- sinar%*%phi
-    far <- (1 - Rar)^2 + Iar^2
+  # Based on page 117 of Beran's book
+  logl <- -sum((periodogram/(2*pi))/fsp)
 
-  }
-  if (!(sum(theta == 0) == q)) {
+  sse <- -4*pi*logl/n
 
-    cosma <- cos(cbind(frs)%*%rbind(1:q))
-    sinma <- sin(cbind(frs)%*%rbind(1:q))
-    Rma <- cosma%*%(-theta)
-    Ima <- sinma%*%(-theta)
-    fma <- (1 - Rma)^2 + Ima^2
-
-  }
-
-  fsp <- (fma/far)*sqrt((1 - cos(frs))^2 + sin(frs)^2)^(-2*dfrac)
-
-  logl <- -(sum(per/fsp)*(4*pi/n))
-  logl <- -2*(1/(2*pi))*sum(log(fsp)*2*pi/m + 2*pi*per/(fsp*m))
-  logl <- -sum(log(fsp) + per/fsp)
   if (just.logl) {
     return(logl)
   } else {
@@ -499,8 +498,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                          approx = FALSE,
                          maxpacf = 0.999,
                          offset = matrix(0, nrow = nrow(y) - d.max + 0.5,
-                                         ncol = ncol(y)), scale = rep(1, ncol(y)),
-                         correct.r = FALSE) {
+                                         ncol = ncol(y)), scale = rep(1, ncol(y))) {
 
   # print(round(pars, 5))
   if (is.matrix(y)) {
@@ -555,7 +553,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         newthe <- theta[, j]
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
                       Covar = Covar, whi = whi, just.logl = just.logl,
-                      max.iter = max.iter, approx = approx, correct.r = correct.r)
+                      max.iter = max.iter, approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
         tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -1)), 1, prod)
@@ -566,7 +564,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, phi = phi[, j],
                       theta = newthe, Covar = Covar, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
         tvals <- apply(expand.grid(c(1, theta[, j]), c(1, -2, 1)), 1, prod)
@@ -577,7 +575,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, phi = phi[, j],
                       theta = newthe, Covar = Covar, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       }
     } else if (d.max == 1.5) {
       z <- na.omit(y[-1, j] - y[-nrow(y), j])
@@ -603,7 +601,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       theta = newthe,
                       phi = phi[, j], whi = whi,
                       just.logl = just.logl,
-                      max.iter = max.iter, approx = approx, correct.r = correct.r)
+                      max.iter = max.iter, approx = approx)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -614,7 +612,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -627,7 +625,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -640,7 +638,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       }
     } else if (d.max == 2.5) {
       z <- y[-1, j] - y[-nrow(y), j]
@@ -667,7 +665,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       dfrac = dfr, Covar = Covar.diff,
                       phi = phi[, j], theta = newthe, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < 1.5 & d >= 0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -678,7 +676,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -689,7 +687,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe, phi = phi[, j],
                       Covar = Covar.diff, whi = whi, just.logl = just.logl,
                       max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -700,7 +698,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:4))
@@ -711,7 +709,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       }
     } else if (d.max == 3.5) {
       z <- y[-1, j] - y[-nrow(y), j]
@@ -741,7 +739,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       dfrac = dfr, Covar = Covar.diff,
                       phi = phi[, j], theta = newthe, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < 2.5 & d >= 1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0, 1))
@@ -752,7 +750,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < 1.5 & d >= 0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
@@ -764,7 +762,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                       Covar = Covar.diff, whi = whi,
                       just.logl = just.logl,
                       max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < 0.5 & d >= -0.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
@@ -775,7 +773,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -0.5 & d >= -1.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:4))
@@ -786,7 +784,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       } else if (d < -1.5 & d >= -2.5) {
 
         pows <- expand.grid(c(0:length(theta[, j])), c(0:5))
@@ -797,7 +795,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
                       just.logl = just.logl, max.iter = max.iter,
-                      approx = approx, correct.r = correct.r)
+                      approx = approx)
       }
     }
     if (just.logl) {
@@ -1103,8 +1101,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL,
       objs <- fima.ll.auto.donly(pars = d.start, y = y,
                                  d.max = d.max, Covar = Covar,
                                  whi = whi,
-                                 max.iter = max.iter,
-                                 approx = approx)
+                                 max.iter = max.iter)
     }
   }
 
@@ -1476,7 +1473,7 @@ comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps, appro
 
 comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
                     q = 0, whi = FALSE,
-                    eps = .Machine$double.eps^(1/3)) {
+                    eps = 0.01) {
 
   eps.start <- eps
 
