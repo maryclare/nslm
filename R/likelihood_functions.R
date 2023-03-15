@@ -648,7 +648,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         Covar.diff <- Covar[-1, , drop = FALSE] - Covar[-nrow(Covar), , drop = FALSE]
         Covar.diff <- Covar.diff[-1, , drop = FALSE] -
           Covar.diff[-nrow(Covar.diff), , drop = FALSE]
-        Covar.diff <- Covar[,
+        Covar.diff <- Covar.diff[,
                             !(apply(Covar.diff, 2, min) == 0 &
                                 apply(Covar.diff, 2, max) == 0),
                             drop = FALSE]
