@@ -368,10 +368,12 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
 }
 
 #' @export
-diffseries.mc <- function(z, d) {
+diffseries.mc <- function(z, d, return.mat = FALSE) {
   n <- length(z)
   dz <- bs <- numeric(length(z))
-  # bs <- (-1)^(0:(n - 1))*(gamma(d + 1)/(gamma(0:(n - 1) + 1)*gamma(d - 0:(n - 1) + 1)))
+  if (return.mat) {
+    mat <- matrix(0, n, n)
+  }
   for (i in 1:n) {
     if (i == 1) {
       bs[i] <- 1
@@ -383,8 +385,15 @@ diffseries.mc <- function(z, d) {
       bs[i] <- -bs[i - 1]*(d - i + 2)/(i - 1)
       dz[i] <- sum(z[i:1]*bs[1:i])
     }
+    if (return.mat) {
+      mat[i, i:1] <- bs[1:i]
+    }
   }
-  return(dz)
+  if (return.mat) {
+    list("dz" = dz, "mat" = mat)
+  } else {
+    return(dz)
+  }
 }
 
 # Function that computes the log likelihood of an ARFIMA(p, d, q) process
