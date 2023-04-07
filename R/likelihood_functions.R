@@ -1457,8 +1457,9 @@ comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
 
 #' @export
 comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi = FALSE,
-                         eps = 0.01, approx = FALSE) {
+                         eps = 0.01, approx = FALSE, fixbeta = TRUE) {
 
+  if (!fixbeta) {
   get.val <- fima.ll.auto(y = y, d.max = d.max,
                           Covar = Covar, whi = whi,
                           par = opt.obj$pars,
@@ -1478,6 +1479,15 @@ comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi = FALSE,
                   Covar.diff = Covar.diff,
                   sse = get.val$sses, p = p, q = q,
               .relStep = eps, approx = approx)$Hessian
+  } else {
+    H <- fdHess(pars = pars,
+                fima.ll.auto,
+                y = y,
+                d.max = d.max,
+                Covar = Covar, whi = whi,
+                p = p, q = q,
+                .relStep = eps, approx = approx)$Hessian
+  }
   return(H)
 }
 
