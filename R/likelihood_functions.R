@@ -1480,8 +1480,9 @@ comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps, appro
   return(H)
 }
 
+#' @export
 comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
-                    q = 0, whi = FALSE,
+                    q = 0, whi = FALSE, approx = FALSE,
                     eps = 0.01) {
 
   eps.start <- eps
@@ -1492,19 +1493,19 @@ comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
     if ((opt$pars + 2*eps <= d.max) & (opt$pars - 2*eps >= -1.5)) {
       diff <- (-fima.ll.auto(pars = opt$pars + 2*eps,
                                 y = y, d.max = d.max,
-                                Covar = Covar, whi = whi) +
+                                Covar = Covar, whi = whi, approx = approx) +
                     16*fima.ll.auto(pars = opt$pars + eps,
                                     y = y, d.max = d.max,
-                                    Covar = Covar, whi = whi) -
+                                    Covar = Covar, whi = whi, approx = approx) -
                     30*fima.ll.auto(pars = opt$pars,
                                     y = y, d.max = d.max,
-                                    Covar = Covar, whi = whi) +
+                                    Covar = Covar, whi = whi, approx = approx) +
                     16*fima.ll.auto(pars = opt$pars - eps,
                                     y = y, d.max = d.max,
-                                    Covar = Covar, whi = whi) -
+                                    Covar = Covar, whi = whi, approx = approx) -
                     fima.ll.auto(pars = opt$pars - 2*eps,
                                  y = y, d.max = d.max,
-                                 Covar = Covar, whi = whi))/(12*eps^2)
+                                 Covar = Covar, whi = whi, approx = approx))/(12*eps^2)
       stop <- TRUE
     } else {
       cat("Repeat\n")
@@ -1521,13 +1522,13 @@ comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
     if ((opt$pars + eps <= d.max) & (opt$pars - eps >= -1.5)) {
       diff <- (fima.ll.auto(pars = opt$pars + eps,
                                y = y, d.max = d.max,
-                               Covar = Covar, whi = whi) -
+                               Covar = Covar, whi = whi, approx = approx) -
                     2*fima.ll.auto(pars = opt$pars,
                                    y = y, d.max = d.max,
-                                   Covar = Covar, whi = whi) +
+                                   Covar = Covar, whi = whi, approx = approx) +
                     fima.ll.auto(pars = opt$pars - eps,
                                  y = y, d.max = d.max,
-                                 Covar = Covar, whi = whi))/(eps^2)
+                                 Covar = Covar, whi = whi, approx = approx))/(eps^2)
       stop <- TRUE
     } else {
       cat("Repeat\n")
