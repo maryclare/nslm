@@ -1459,12 +1459,12 @@ comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
 comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi = FALSE,
                          eps = 0.01, approx = FALSE, fixbeta = TRUE) {
 
+  pars <- opt.obj$pars
   if (!fixbeta) {
   get.val <- fima.ll.auto(y = y, d.max = d.max,
                           Covar = Covar, whi = whi,
                           par = opt.obj$pars,
                           just.logl = FALSE, p = p, q = q, approx = approx)
-  pars <- opt.obj$pars
   if ("Covar.diff" %in% names(get.val)) {
     pars <- c(c(na.omit(get.val$betas)), pars)
     Covar.diff <- get.val$Covar.diff
