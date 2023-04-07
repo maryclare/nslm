@@ -1456,7 +1456,8 @@ comp.ll <- function(pars, y, Covar.diff, Covar, sse, d.max = d.max, whi,
 }
 
 #' @export
-comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi, eps, approx) {
+comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi = FALSE,
+                         eps = 0.01, approx = FALSE) {
 
   get.val <- fima.ll.auto(y = y, d.max = d.max,
                           Covar = Covar, whi = whi,
