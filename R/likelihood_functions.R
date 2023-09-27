@@ -529,7 +529,7 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
 #' @export
 whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                           just.logl = TRUE) {
+                           just.logl = TRUE, invert = TRUE {
 
   n <- length(z)
   m <- floor((n - 1)/2)
@@ -546,7 +546,7 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
   dfrac.invert <- dfrac + k
 
-  if (k == 0) {
+  if ((k == 0 & invert) | !invert) {
     Gammatlriz <- spec.mv(z, dfrac = dfrac.invert, invert = TRUE)
     sse <- t(Gammatlriz)%*%z
 
