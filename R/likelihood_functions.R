@@ -544,13 +544,14 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
   k <- ifelse(dfrac >= -0.5, 0, ifelse(dfrac >= -1.5, 1, ifelse(dfrac >= -2.5, 2, 3)))
 
-  dfrac.invert <- dfrac + k
+
 
   if ((k == 0 & invert) | !invert) {
-    Gammatlriz <- spec.mv(z, dfrac = dfrac.invert, invert = TRUE)
+    Gammatlriz <- spec.mv(z, dfrac = dfrac, invert = TRUE)
     sse <- t(Gammatlriz)%*%z
 
   } else {
+    dfrac.invert <- dfrac + k
   # maparts <- list(c(-1),
   #                 c(-2, 1),
   #                 c(-3, 3, -1),
