@@ -529,7 +529,7 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
 #' @export
 whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                           just.logl = TRUE, invert = TRUE) {
+                           just.logl = TRUE, invert = TRUE, nomean = FALSE) {
 
   n <- length(z)
   m <- floor((n - 1)/2)
@@ -538,7 +538,9 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     z <- linmod$residuals
     beta <- linmod$coef
   } else {
-    z <- (z - mean(z))
+    if (!nomean) {
+      z <- (z - mean(z))
+    }
     beta <- NULL
   }
 
