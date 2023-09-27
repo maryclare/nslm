@@ -566,12 +566,8 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
                    n + k, n + k)
 
-  A <- matrix(0, n + k, n + k)
-  A[1, 1] <- 1
-  A[2, 1:2] <- c(-1, 1)
-  for (i in 3:nrow(A)) {
-    A[i, (i - 2 + 1):(i - 1 + 1)] <- c(-1, 1)
-  }
+  A <- diag(n + k)
+  diag(A[-1, -ncol(A)]) <- -1
   A <- eval(parse(text = paste(rep("A", k), collapse = "%*%")))
 
   At <- A[(k + 1):nrow(A), ]
