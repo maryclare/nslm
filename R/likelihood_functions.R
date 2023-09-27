@@ -477,10 +477,9 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
       beta <- NULL
     } else {
       ytRiCovar <- t(ad$E[, 1, drop = FALSE])%*%ad$E[, -1, drop = FALSE]
-      sse <- crossprod(ad$E[, 1, drop = FALSE]) - crossprod(t(ytRiCovar),
-                                                            tcrossprod(solve(crossprod(ad$E[, -1, drop = FALSE])),
-                                                                       ytRiCovar))
       beta <- tcrossprod(solve(crossprod(ad$E[, -1, drop = FALSE])), ytRiCovar)
+      sse <- crossprod(ad$E[, 1, drop = FALSE]) - crossprod(t(ytRiCovar), beta)
+
     }
     logl <- -ad$lbeta.sum/(2*n) - log(sse/n)/2
 
@@ -529,78 +528,84 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
 #' @export
 whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                           just.logl = TRUE, invert = TRUE, nomean = FALSE) {
+                           just.logl = TRUE, invert = TRUE) {
 
   n <- length(z)
-  m <- floor((n - 1)/2)
-  if (!is.null(Covar)) {
-    linmod <- lm(z~Covar-1)
-    z <- linmod$residuals
-    beta <- linmod$coef
+
+  if (is.null(Covar)) {
+    Z <- matrix(z, nrow = n, ncol = 1)
   } else {
-    if (!nomean) {
-      z <- (z - mean(z))
-    }
-    beta <- NULL
+    Z <- cbind(z, Covar)
   }
 
   k <- ifelse(dfrac >= -0.5, 0, ifelse(dfrac >= -1.5, 1, ifelse(dfrac >= -2.5, 2, 3)))
 
-
-
   if ((k == 0 & invert) | !invert) {
-    Gammatlriz <- spec.mv(z, dfrac = dfrac, invert = TRUE)
-    sse <- t(Gammatlriz)%*%z
+    GammatlriZ <- apply(Z, 2, function(x) {spec.mv(x, dfrac = dfrac, invert = TRUE,
+                                                   theta = theta, phi = phi)})
 
   } else {
     dfrac.invert <- dfrac + k
-  # maparts <- list(c(-1),
-  #                 c(-2, 1),
-  #                 c(-3, 3, -1),
-  #                 c(-4, 6, -4, 1))
-  #
-  # gamma <- arfima.acv(n + 1, d = dfrac,
-  #                     corr = FALSE)
-  # Gamma <- matrix(gamma[abs(outer(1:n, 1:n, "-")) + 1], n, n)
 
+    gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
+                     n + k, n + k)
 
-  gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
-  Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
-                   n + k, n + k)
+    gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
+                     n + k, n + k)
 
-  A <- diag(n + k)
-  diag(A[-1, -ncol(A)]) <- -1
-  A <- eval(parse(text = paste(rep("A", k), collapse = "%*%")))
+    A <- diag(n + k)
+    diag(A[-1, -ncol(A)]) <- -1
+    A <- eval(parse(text = paste(rep("A", k), collapse = "%*%")))
 
-  At <- A[(k + 1):nrow(A), ]
+    At <- A[(k + 1):nrow(A), ]
 
-  Gammatul <- Gammat[1:k, 1:k, drop = FALSE]
-  Gammatur <- Gammat[1:k, (k + 1):ncol(Gammat), drop = FALSE]
-  Gammatll <- Gammat[(k + 1):ncol(Gammat), 1:k, drop = FALSE]
-  Gammatlr <- Gammat[(k + 1):ncol(Gammat), (k + 1):ncol(Gammat), drop = FALSE]
+    Gammatul <- Gammat[1:k, 1:k, drop = FALSE]
+    Gammatur <- Gammat[1:k, (k + 1):ncol(Gammat), drop = FALSE]
+    Gammatll <- Gammat[(k + 1):ncol(Gammat), 1:k, drop = FALSE]
+    Gammatlr <- Gammat[(k + 1):ncol(Gammat), (k + 1):ncol(Gammat), drop = FALSE]
 
-  Al <- At[, 1:k]
-  Ar <- At[, (k + 1):nrow(A)]
+    Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
+    Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
+    Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
+    Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
 
-  V <- rbind(t(Ar%*%t(Gammatur) + Al%*%Gammatul/2), t(Al))
+    Al <- At[, 1:k]
+    Ar <- At[, (k + 1):nrow(A)]
 
-  P <- matrix(0, 2*k, 2*k)
-  P[1:k, (k + 1):(2*k)] <- diag(k)
-  P[(k + 1):(2*k), 1:k] <- diag(k)
+    V <- rbind(t(Ar%*%t(Gammatur) + Al%*%Gammatul/2), t(Al))
 
-  Ari <- solve(Ar)
-  Ariz <- Ari%*%z
-  GammatlriAriz <- spec.mv(Ariz, dfrac = dfrac.invert, invert = TRUE) # solve(Gammatlr)%*%Ariy
-  AritV <- Ari%*%t(V)
-  GammatlriAritV <- apply(AritV, 2, function(x) {
-    spec.mv(x, dfrac = dfrac.invert, invert = TRUE)
-  })
+    Ari <- solve(Ar)
+    AriZ <- Ari%*%Z
+    AritV <- Ari%*%t(V)
 
-  sse <- t(GammatlriAriz)%*%Ariz -
-    t(GammatlriAriz)%*%AritV%*%solve(P + t(AritV)%*%GammatlriAritV)%*%t(AritV)%*%GammatlriAriz
+    GammatlriAriZ <- apply(AriZ, 2, function(x) {
+      spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
+    }) # Approximates solve(Gammatruelr)%*%solve(A)%*%Z
+    GammatlriAritV <- apply(AritV, 2, function(x) {
+      spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
+    }) #  Approximates solve(Gammatruelr)%*%solve(A)%*%t(V)
+
+    P <- matrix(0, 2*k, 2*k)
+    P[1:k, (k + 1):(2*k)] <- diag(k)
+    P[(k + 1):(2*k), 1:k] <- diag(k)
+
+    Inner <- solve(P + t(AritV)%*%GammatlriAritV)
+
+    GammatlriZ <- (t(Ari) - t(Ari)%*%GammatlriAritV%*%Inner%*%t(AritV))%*%GammatlriAriZ
 
   }
 
+  if (is.null(Covar)) {
+    sse <- sum(z*GammatlriZ)
+    beta <- NULL
+  } else {
+    ztRiCovar <- t(z)%*%GammatlriZ[, -1, drop = FALSE]
+    CovartRiCovar <- t(Covar)%*%GammatlriZ[, -1, drop = FALSE]
+    beta <- tcrossprod(solve(CovartRiCovar), ztRiCovar)
+    sse <- t(z)%*%GammatlriZ[, 1, drop = FALSE] - crossprod(t(ztRiCovar), beta)
+  }
   logl <- - log(sse/n)/2
 
   if (just.logl) {
