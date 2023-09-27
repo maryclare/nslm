@@ -544,6 +544,13 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
   k <- ifelse(dfrac >= -0.5, 0, ifelse(dfrac >= -1.5, 1, ifelse(dfrac >= -2.5, 2, 3)))
 
+  dfrac.invert <- dfrac + k
+
+  if (k == 0) {
+    Gammatlriz <- spec.mv(z, dfrac = dfrac.invert, invert = TRUE)
+    sse <- t(Gammatlriz)%*%z
+
+  } else {
   # maparts <- list(c(-1),
   #                 c(-2, 1),
   #                 c(-3, 3, -1),
@@ -553,7 +560,6 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   #                     corr = FALSE)
   # Gamma <- matrix(gamma[abs(outer(1:n, 1:n, "-")) + 1], n, n)
 
-  dfrac.invert <- dfrac + k
 
   gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
   Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
@@ -584,15 +590,18 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   P[(k + 1):(2*k), 1:k] <- diag(k)
 
   Ari <- solve(Ar)
-  Ariy <- Ari%*%y
-  GammatlriAriy <- spec.mv(Ariy, dfrac = dfrac.invert, invert = TRUE) # solve(Gammatlr)%*%Ariy
+  Ariz <- Ari%*%z
+  GammatlriAriy <- spec.mv(Ariz, dfrac = dfrac.invert, invert = TRUE) # solve(Gammatlr)%*%Ariy
   AritV <- Ari%*%t(V)
   GammatlriAritV <- apply(AritV, 2, function(x) {
     spec.mv(x, dfrac = dfrac.invert, invert = TRUE)
   })
 
-  sse <- t(GammatlriAriy)%*%Ariy -
-    t(GammatlriAriy)%*%AritV%*%solve(P + t(AritV)%*%GammatlriAritV)%*%t(AritV)%*%GammatlriAriy
+  sse <- t(GammatlriAriz)%*%Ariz -
+    t(GammatlriAriz)%*%AritV%*%solve(P + t(AritV)%*%GammatlriAritV)%*%t(AritV)%*%GammatlriAriz
+
+  }
+
   logl <- - log(sse/n)/2
 
   if (just.logl) {
