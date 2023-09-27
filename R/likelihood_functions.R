@@ -591,7 +591,7 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
   Ari <- solve(Ar)
   Ariz <- Ari%*%z
-  GammatlriAriy <- spec.mv(Ariz, dfrac = dfrac.invert, invert = TRUE) # solve(Gammatlr)%*%Ariy
+  GammatlriAriz <- spec.mv(Ariz, dfrac = dfrac.invert, invert = TRUE) # solve(Gammatlr)%*%Ariy
   AritV <- Ari%*%t(V)
   GammatlriAritV <- apply(AritV, 2, function(x) {
     spec.mv(x, dfrac = dfrac.invert, invert = TRUE)
