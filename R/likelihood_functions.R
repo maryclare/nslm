@@ -708,7 +708,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
           pows$pow <- rowSums(pows)
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
           dfr <- d + 2
-        } {
+        } else {
           newthe <- theta[, j]
           dfr <- d
         }
@@ -771,7 +771,6 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
                                    c(1, -2, 1)), 1, prod)
           pows$pow <- rowSums(pows)
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
-
           dfr <- d + 1
         } else {
           newthe <- theta[, j]
@@ -981,8 +980,8 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
           dfr <- d + 1
         } else {
-          dfr <- d - 3
           newthe <- theta[, j]
+          dfr <- d - 3
         }
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
@@ -997,8 +996,8 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
           dfr <- d + 2
         } else {
-          dfr <- d - 3
           newthe <- theta[, j]
+          dfr <- d - 3
         }
         ll <- fima.ll(z, dfrac = dfr, theta = newthe,
                       phi = phi[, j], Covar = Covar.diff, whi = whi,
