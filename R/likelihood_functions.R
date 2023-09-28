@@ -691,7 +691,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
           pows$pow <- rowSums(pows)
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
           dfr <- d + 1
-        } {
+        } else {
           newthe <- theta[, j]
           dfr <- d
         }
