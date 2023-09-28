@@ -541,12 +541,8 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   k <- ifelse(dfrac >= -0.5, 0, ifelse(dfrac >= -1.5, 1, ifelse(dfrac >= -2.5, 2, 3)))
 
   if ((k == 0 & invert) | !invert) {
-    if (dfrac != 0) {
     GammatlriZ <- apply(Z, 2, function(x) {spec.mv(x, dfrac = dfrac, invert = TRUE,
                                                    theta = theta, phi = phi)})
-    } else {
-      GammatlriZ <- Z
-    }
 
   } else {
     dfrac.invert <- dfrac + k
