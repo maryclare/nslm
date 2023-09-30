@@ -561,7 +561,7 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     if (!css) {
       gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
     } else {
-      gammat <- css.mv(c(1, rep(0, length(r) - 1)), dfrac = -dfrac)
+      gammat <- css.mv(c(1, rep(0, n + k)), dfrac = -dfrac)
     }
     Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
                      n + k, n + k)
