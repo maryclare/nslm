@@ -1,3 +1,4 @@
+#' @export
 spec.mv <- function(z, phi = 0, theta = 0, dfrac = 0, invert = FALSE) {
 
   n <- length(z)
@@ -18,6 +19,8 @@ spec.mv <- function(z, phi = 0, theta = 0, dfrac = 0, invert = FALSE) {
   return(c(Re(fft(fsp*fft(z, inv = TRUE)/n))))
 }
 
+
+#' @export
 css.mv <- function(z, dfrac = 0) {
   return(rev(diffseries.mc(rev(diffseries.mc(z, dfrac)), dfrac)))
 }
