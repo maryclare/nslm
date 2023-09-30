@@ -454,7 +454,7 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   } else if (whi & invert) {
     logl <- whi.ll.invert(z = z, theta = theta, dfrac = dfrac,
                           Covar = Covar, phi = phi,
-                          just.logl = just.logl, css = css)
+                          just.logl = just.logl, css = approx)
 
     if (just.logl) {
       return(logl)
