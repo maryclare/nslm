@@ -18,6 +18,11 @@ spec.mv <- function(z, phi = 0, theta = 0, dfrac = 0, invert = FALSE) {
   return(c(Re(fft(fsp*fft(z, inv = TRUE)/n))))
 }
 
+css.mv <- function(z, dfrac = 0) {
+  return(rev(diffseries.mc(rev(diffseries.mc(z, dfrac)), dfrac)))
+}
+
+
 #' @export
 arfima.specden <- function(frs, phi = 0, theta = 0, dfrac = 0, sig.sq = 1) {
 
@@ -528,7 +533,7 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
 #' @export
 whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                           just.logl = TRUE, invert = TRUE) {
+                           just.logl = TRUE, invert = TRUE, css = FALSE) {
 
   n <- length(z)
 
@@ -541,17 +546,27 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   k <- ifelse(dfrac >= -0.5, 0, ifelse(dfrac >= -1.5, 1, ifelse(dfrac >= -2.5, 2, 3)))
 
   if ((k == 0 & invert) | !invert) {
-    GammatlriZ <- apply(Z, 2, function(x) {spec.mv(x, dfrac = dfrac, invert = TRUE,
-                                                   theta = theta, phi = phi)})
+    GammatlriZ <- apply(Z, 2, function(x) {
+      if (!css) {
+        spec.mv(x, dfrac = dfrac, invert = TRUE, theta = theta, phi = phi)
+      } else {
+        css.mv(x, dfrac = dfrac)
+      }
+    })
+
 
   } else {
     dfrac.invert <- dfrac + k
 
-    gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
-    Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
-                     n + k, n + k)
+    # gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    # Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
+    #                  n + k, n + k)
 
-    gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    if (!css) {
+      gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    } else {
+      gammat <- css.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert)
+    }
     Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
                      n + k, n + k)
 
@@ -566,10 +581,10 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     Gammatll <- Gammat[(k + 1):ncol(Gammat), 1:k, drop = FALSE]
     Gammatlr <- Gammat[(k + 1):ncol(Gammat), (k + 1):ncol(Gammat), drop = FALSE]
 
-    Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
-    Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
-    Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
-    Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
+    # Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
+    # Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
+    # Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
+    # Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
 
     Al <- At[, 1:k]
     Ar <- At[, (k + 1):nrow(A)]
@@ -581,10 +596,18 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     AritV <- Ari%*%t(V)
 
     GammatlriAriZ <- apply(AriZ, 2, function(x) {
-      spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
+      if (!css) {
+        spec.mv(x, dfrac = dfrac, invert = TRUE, theta = theta, phi = phi)
+      } else {
+        css.mv(x, dfrac = dfrac)
+      }
     }) # Approximates solve(Gammatruelr)%*%solve(A)%*%Z
     GammatlriAritV <- apply(AritV, 2, function(x) {
-      spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
+      if (!css) {
+        spec.mv(x, dfrac = dfrac, invert = TRUE, theta = theta, phi = phi)
+      } else {
+        css.mv(x, dfrac = dfrac)
+      }
     }) #  Approximates solve(Gammatruelr)%*%solve(A)%*%t(V)
 
     P <- matrix(0, 2*k, 2*k)
