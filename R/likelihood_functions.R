@@ -547,9 +547,9 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   } else {
     dfrac.invert <- dfrac + k
 
-    gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
-    Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
-                        n + k, n + k)
+    # gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    # Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
+    #                     n + k, n + k)
 
     gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
     Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
@@ -566,10 +566,10 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     Gammatll <- Gammat[(k + 1):ncol(Gammat), 1:k, drop = FALSE]
     Gammatlr <- Gammat[(k + 1):ncol(Gammat), (k + 1):ncol(Gammat), drop = FALSE]
 
-    Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
-    Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
-    Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
-    Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
+    # Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
+    # Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
+    # Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
+    # Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
 
     Al <- At[, 1:k]
     Ar <- At[, (k + 1):nrow(A)]
