@@ -20,6 +20,11 @@ spec.mv <- function(z, phi = 0, theta = 0, dfrac = 0, invert = FALSE) {
 }
 
 #' @export
+css.mv <- function(z, dfrac = 0) {
+  return(rev(diffseries.mc(rev(diffseries.mc(z, dfrac)), dfrac)))
+}
+
+#' @export
 arfima.specden <- function(frs, phi = 0, theta = 0, dfrac = 0, sig.sq = 1) {
 
   far <- fma <- rep(1, length(frs))
@@ -545,13 +550,18 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     if (!css) {
       GammatlriZ <- apply(Z, 2, function(x) {spec.mv(x, dfrac = dfrac, invert = TRUE,
                                                      theta = theta, phi = phi)})
+    } else {
+      GammatlriZ <- apply(Z, 2, function(x) {css.mv(x, dfrac = dfrac)})
     }
+
 
   } else {
     dfrac.invert <- dfrac + k
 
     if (!css) {
       gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    } else {
+      gammat <- css.mv(c(1, rep(0, length(r) - 1)), dfrac = -dfrac)
     }
     Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
                      n + k, n + k)
@@ -583,6 +593,9 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     GammatlriAritV <- apply(AritV, 2, function(x) {
       spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
     }) #  Approximates solve(Gammatruelr)%*%solve(A)%*%t(V)
+    } else {
+      GammatlriAriZ <- apply(AriZ, 2, function(x) {css.mv(x, dfrac = dfrac)})
+      GammatlriAritV <- apply(AritV, 2, function(x) {css.mv(x, dfrac = dfrac)})
     }
     P <- matrix(0, 2*k, 2*k)
     P[1:k, (k + 1):(2*k)] <- diag(k)
