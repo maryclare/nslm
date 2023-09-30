@@ -1187,7 +1187,7 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL,
                       d = curr.d,
                       whi = whi, tr = tr, un = un,
                       max.iter = max.iter,
-                      approx = approx, maxpacf = maxpacf, invert.invert)
+                      approx = approx, maxpacf = maxpacf, invert = invert)
 
     if (q == 0) {
       pmcfval <- thetaval <- matrix(0, nrow = 1, ncol = k)
