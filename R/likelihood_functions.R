@@ -1,4 +1,3 @@
-#' @export
 spec.mv <- function(z, phi = 0, theta = 0, dfrac = 0, invert = FALSE) {
 
   n <- length(z)
@@ -18,13 +17,6 @@ spec.mv <- function(z, phi = 0, theta = 0, dfrac = 0, invert = FALSE) {
   }
   return(c(Re(fft(fsp*fft(z, inv = TRUE)/n))))
 }
-
-
-#' @export
-css.mv <- function(z, dfrac = 0) {
-  return(rev(diffseries.mc(rev(diffseries.mc(z, dfrac)), dfrac)))
-}
-
 
 #' @export
 arfima.specden <- function(frs, phi = 0, theta = 0, dfrac = 0, sig.sq = 1) {
@@ -277,16 +269,16 @@ arfima.acv <- function(lag.max = 10, d = 0, theta = NULL,
   }
 
   if (length(phi) > 1) {
-  for (i in length(phi):2) {
-    if (phi[i] == 0) {
-      phi <- phi[1:(i - 1)]
-    }
+    for (i in length(phi):2) {
+      if (phi[i] == 0) {
+        phi <- phi[1:(i - 1)]
+      }
     }
   }
 
   if (length(phi) == 1) {
     if (phi == 0) {
-        phi <- NULL
+      phi <- NULL
     }
   }
 
@@ -455,8 +447,8 @@ fima.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     }
   } else if (whi & invert) {
     logl <- whi.ll.invert(z = z, theta = theta, dfrac = dfrac,
-                   Covar = Covar, phi = phi,
-                   just.logl = just.logl)
+                          Covar = Covar, phi = phi,
+                          just.logl = just.logl)
 
     if (just.logl) {
       return(logl)
@@ -536,7 +528,7 @@ whi.ll <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
 
 #' @export
 whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
-                           just.logl = TRUE, invert = TRUE, css = FALSE) {
+                           just.logl = TRUE, invert = TRUE) {
 
   n <- length(z)
 
@@ -549,27 +541,17 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
   k <- ifelse(dfrac >= -0.5, 0, ifelse(dfrac >= -1.5, 1, ifelse(dfrac >= -2.5, 2, 3)))
 
   if ((k == 0 & invert) | !invert) {
-    GammatlriZ <- apply(Z, 2, function(x) {
-      if (!css) {
-        spec.mv(x, dfrac = dfrac, invert = TRUE, theta = theta, phi = phi)
-      } else {
-        css.mv(x, dfrac = dfrac)
-      }
-    })
-
+    GammatlriZ <- apply(Z, 2, function(x) {spec.mv(x, dfrac = dfrac, invert = TRUE,
+                                                   theta = theta, phi = phi)})
 
   } else {
     dfrac.invert <- dfrac + k
 
-    # gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
-    # Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
-    #                  n + k, n + k)
+    gammatrue <- arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
+    Gammatrue <- matrix(gammatrue[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
+                        n + k, n + k)
 
-    if (!css) {
-      gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
-    } else {
-      gammat <- css.mv(c(1, rep(0, n + k)), dfrac = -dfrac.invert)
-    }
+    gammat <- spec.mv(c(1, rep(0, n + k)), dfrac = dfrac.invert, theta = theta, phi = phi) # arfima.acv(n + k + 1, d = dfrac.invert, corr = FALSE)
     Gammat <- matrix(gammat[abs(outer(1:(n + k), 1:(n + k), "-")) + 1],
                      n + k, n + k)
 
@@ -584,10 +566,10 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     Gammatll <- Gammat[(k + 1):ncol(Gammat), 1:k, drop = FALSE]
     Gammatlr <- Gammat[(k + 1):ncol(Gammat), (k + 1):ncol(Gammat), drop = FALSE]
 
-    # Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
-    # Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
-    # Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
-    # Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
+    Gammatrueul <- Gammatrue[1:k, 1:k, drop = FALSE]
+    Gammatrueur <- Gammatrue[1:k, (k + 1):ncol(Gammatrue), drop = FALSE]
+    Gammatruell <- Gammatrue[(k + 1):ncol(Gammatrue), 1:k, drop = FALSE]
+    Gammatruelr <- Gammatrue[(k + 1):ncol(Gammatrue), (k + 1):ncol(Gammatrue), drop = FALSE]
 
     Al <- At[, 1:k]
     Ar <- At[, (k + 1):nrow(A)]
@@ -599,18 +581,10 @@ whi.ll.invert <- function (z, theta = 0, dfrac = 0, Covar = NULL, phi = 0,
     AritV <- Ari%*%t(V)
 
     GammatlriAriZ <- apply(AriZ, 2, function(x) {
-      if (!css) {
-        spec.mv(x, dfrac = dfrac, invert = TRUE, theta = theta, phi = phi)
-      } else {
-        css.mv(x, dfrac = dfrac)
-      }
+      spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
     }) # Approximates solve(Gammatruelr)%*%solve(A)%*%Z
     GammatlriAritV <- apply(AritV, 2, function(x) {
-      if (!css) {
-        spec.mv(x, dfrac = dfrac, invert = TRUE, theta = theta, phi = phi)
-      } else {
-        css.mv(x, dfrac = dfrac)
-      }
+      spec.mv(x, dfrac = dfrac.invert, invert = TRUE, theta = theta, phi = phi)
     }) #  Approximates solve(Gammatruelr)%*%solve(A)%*%t(V)
 
     P <- matrix(0, 2*k, 2*k)
@@ -794,7 +768,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
 
           pows <- expand.grid(c(0:length(theta[, j])), c(0:2))
           tvals <- apply(expand.grid(c(1, theta[, j]),
-                                   c(1, -2, 1)), 1, prod)
+                                     c(1, -2, 1)), 1, prod)
           pows$pow <- rowSums(pows)
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
           dfr <- d + 1
@@ -812,7 +786,7 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
 
           pows <- expand.grid(c(0:length(theta[, j])), c(0:3))
           tvals <- apply(expand.grid(c(1, theta[, j]),
-                                   c(1, -3, 3, -1)), 1, prod)
+                                     c(1, -3, 3, -1)), 1, prod)
           pows$pow <- rowSums(pows)
           newthe <- (aggregate(tvals, list("pow" = pows$pow), sum)$x)[-1]
           dfr <- d + 2
@@ -834,9 +808,9 @@ fima.ll.auto <- function(pars, y, d.max = 1.5, Covar = NULL, q = 0, p = 0,
         Covar.diff <- Covar.diff[-1, , drop = FALSE] -
           Covar.diff[-nrow(Covar.diff), , drop = FALSE]
         Covar.diff <- Covar.diff[,
-                            !(apply(Covar.diff, 2, min) == 0 &
-                                apply(Covar.diff, 2, max) == 0),
-                            drop = FALSE]
+                                 !(apply(Covar.diff, 2, min) == 0 &
+                                     apply(Covar.diff, 2, max) == 0),
+                                 drop = FALSE]
         if (ncol(Covar.diff) == 0) {
           Covar.diff <- NULL
         }
@@ -1134,15 +1108,15 @@ fima.ll.auto.iterative <- function(y, d.max = 1.5, Covar = NULL,
   if (p != 0 | q != 0) {
 
     if (is.null(rest.start)) {
-    init.fit <- apply(y, 2, function(yy) {
-      if (!is.null(Covar)) {
-      arima(diffseries.mc(lm(yy~Covar-1)$residuals, curr.d),
-            order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
-      } else {
-        arima(diffseries.mc(yy, curr.d),
-              order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
-      }
-    })
+      init.fit <- apply(y, 2, function(yy) {
+        if (!is.null(Covar)) {
+          arima(diffseries.mc(lm(yy~Covar-1)$residuals, curr.d),
+                order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
+        } else {
+          arima(diffseries.mc(yy, curr.d),
+                order = c(p, 0, q), include.mean = FALSE, method = "CSS-ML")$coef
+        }
+      })
       init.fit <- matrix(init.fit, nrow = q + p, ncol = k)
     } else {
       init.fit <- matrix(rest.start, nrow = q + p, ncol = k)
@@ -1400,7 +1374,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
     if (print.iter) {
       cat("Approximate: ", approx, "\n")
       cat("d=", curr.d, "\n")
-      }
+    }
 
     init.fit <- NULL
     if (p != 0 | q != 0) {
@@ -1426,10 +1400,10 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
 
             if (((which(curr.d == ds) - 1) < 1) | is.na(objs[which(curr.d == ds) - 1])) {
               new.start <- TRUE
-            # } else if (is.na(objs[which(curr.d == ds) - 2])) {
+              # } else if (is.na(objs[which(curr.d == ds) - 2])) {
             } else {
               if (!lower.bound[which(curr.d == ds) - 1] | !upper.bound[which(curr.d == ds) - 1]) {
-              init.fit <- matrix(pars[[which(curr.d == ds) - 1]], nrow = q + p, ncol = k)
+                init.fit <- matrix(pars[[which(curr.d == ds) - 1]], nrow = q + p, ncol = k)
               } else {
                 new.start <- TRUE
               }
@@ -1444,10 +1418,10 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
 
             if (((which(curr.d == ds) + 1) > length(objs)) | is.na(objs[which(curr.d == ds) + 1])) {
               new.start <- TRUE
-            # } else if (is.na(objs[which(curr.d == ds) + 2])) {
+              # } else if (is.na(objs[which(curr.d == ds) + 2])) {
             } else {
               if (!lower.bound[which(curr.d == ds) + 1] | !upper.bound[which(curr.d == ds) + 1]) {
-              init.fit <- matrix(pars[[which(curr.d == ds) + 1]], nrow = q + p, ncol = k)
+                init.fit <- matrix(pars[[which(curr.d == ds) + 1]], nrow = q + p, ncol = k)
               } else {
                 new.start <- TRUE
               }
@@ -1551,26 +1525,26 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
           if (q == 0) {
             pmcfval <- thetaval <- matrix(0, nrow = 1, ncol = k)
           } else {
-              if (tr) {
-                if (un) {
-                  pmcfval <- matrix(expit(opt.arma$par[1:(k*q)])*2 - 1, nrow = q, ncol = k)
-                } else {
-                  pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
-                }
-                thetaval <- apply(pmcfval, 2, pacf.ar)
-                if (sum(abs(pmcfval) >= maxpacf) > 0) {
-                  objs[which(curr.d == ds)] <- NA
-                  upper.bound[which(curr.d == ds)] <- sum(pmcfval >= maxpacf) > 0
-                  lower.bound[which(curr.d == ds)] <- sum(pmcfval <= -maxpacf) > 0
-                }
+            if (tr) {
+              if (un) {
+                pmcfval <- matrix(expit(opt.arma$par[1:(k*q)])*2 - 1, nrow = q, ncol = k)
               } else {
-                thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
+                pmcfval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
               }
-              thetavals[[which(curr.d == ds)]] <- thetaval
-              if (print.iter) {
-                cat("thetval=", thetaval, "\n")
+              thetaval <- apply(pmcfval, 2, pacf.ar)
+              if (sum(abs(pmcfval) >= maxpacf) > 0) {
+                objs[which(curr.d == ds)] <- NA
+                upper.bound[which(curr.d == ds)] <- sum(pmcfval >= maxpacf) > 0
+                lower.bound[which(curr.d == ds)] <- sum(pmcfval <= -maxpacf) > 0
               }
+            } else {
+              thetaval <- matrix((opt.arma$par[1:(k*q)]), nrow = q, ncol = k)
             }
+            thetavals[[which(curr.d == ds)]] <- thetaval
+            if (print.iter) {
+              cat("thetval=", thetaval, "\n")
+            }
+          }
 
 
           if (p == 0) {
@@ -1599,10 +1573,10 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
 
           if (approx) {
             out <- fima.ll.auto(c(curr.d, opt.arma$par),
-                                  y = y, d.max = d.max, Covar = Covar, q = q, p = p,
-                                  whi = whi, tr = tr, un = un,
-                                  max.iter = max.iter, approx = approx,
-                                  just.logl = FALSE, invert = invert)
+                                y = y, d.max = d.max, Covar = Covar, q = q, p = p,
+                                whi = whi, tr = tr, un = un,
+                                max.iter = max.iter, approx = approx,
+                                just.logl = FALSE, invert = invert)
             sses[which(curr.d == ds)] <- out$sse
           }
 
@@ -1616,7 +1590,7 @@ fima.ll.auto.exact <- function(y, d.max = 1.5,
         }
 
         if (print.iter) {cat("Skipping!\n")}
-        }
+      }
     }
 
 
@@ -1688,25 +1662,25 @@ comp.hessian <- function(y, d.max, p = 0, q = 0, opt.obj, Covar, whi = FALSE,
 
   pars <- opt.obj$pars
   if (!fixbeta) {
-  get.val <- fima.ll.auto(y = y, d.max = d.max,
-                          Covar = Covar, whi = whi,
-                          par = opt.obj$pars,
-                          just.logl = FALSE, p = p, q = q, approx = approx,
-                          invert = invert)
-  if ("Covar.diff" %in% names(get.val)) {
-    pars <- c(c(na.omit(get.val$betas)), pars)
-    Covar.diff <- get.val$Covar.diff
-  } else {
-    Covar.diff <- NULL
-  }
-  H <- fdHess(pars = pars,
-                  comp.ll,
-                  y = y,
-                  d.max = d.max,
-                  Covar = Covar, whi = whi,
-                  Covar.diff = Covar.diff,
-                  sse = get.val$sses, p = p, q = q,
-              .relStep = eps, approx = approx)$Hessian
+    get.val <- fima.ll.auto(y = y, d.max = d.max,
+                            Covar = Covar, whi = whi,
+                            par = opt.obj$pars,
+                            just.logl = FALSE, p = p, q = q, approx = approx,
+                            invert = invert)
+    if ("Covar.diff" %in% names(get.val)) {
+      pars <- c(c(na.omit(get.val$betas)), pars)
+      Covar.diff <- get.val$Covar.diff
+    } else {
+      Covar.diff <- NULL
+    }
+    H <- fdHess(pars = pars,
+                comp.ll,
+                y = y,
+                d.max = d.max,
+                Covar = Covar, whi = whi,
+                Covar.diff = Covar.diff,
+                sse = get.val$sses, p = p, q = q,
+                .relStep = eps, approx = approx)$Hessian
   } else {
     H <- fdHess(pars = pars,
                 fima.ll.auto,
@@ -1731,20 +1705,20 @@ comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
   while (!stop & count <= 100) {
     if ((opt$pars + 2*eps <= d.max) & (opt$pars - 2*eps >= -1.5)) {
       diff <- (-fima.ll.auto(pars = opt$pars + 2*eps,
-                                y = y, d.max = d.max,
-                                Covar = Covar, whi = whi, approx = approx, invert = invert) +
-                    16*fima.ll.auto(pars = opt$pars + eps,
-                                    y = y, d.max = d.max,
-                                    Covar = Covar, whi = whi, approx = approx, invert = invert) -
-                    30*fima.ll.auto(pars = opt$pars,
-                                    y = y, d.max = d.max,
-                                    Covar = Covar, whi = whi, approx = approx, invert = invert) +
-                    16*fima.ll.auto(pars = opt$pars - eps,
-                                    y = y, d.max = d.max,
-                                    Covar = Covar, whi = whi, approx = approx, invert = invert) -
-                    fima.ll.auto(pars = opt$pars - 2*eps,
+                             y = y, d.max = d.max,
+                             Covar = Covar, whi = whi, approx = approx, invert = invert) +
+                 16*fima.ll.auto(pars = opt$pars + eps,
                                  y = y, d.max = d.max,
-                                 Covar = Covar, whi = whi, approx = approx, invert = invert))/(12*eps^2)
+                                 Covar = Covar, whi = whi, approx = approx, invert = invert) -
+                 30*fima.ll.auto(pars = opt$pars,
+                                 y = y, d.max = d.max,
+                                 Covar = Covar, whi = whi, approx = approx, invert = invert) +
+                 16*fima.ll.auto(pars = opt$pars - eps,
+                                 y = y, d.max = d.max,
+                                 Covar = Covar, whi = whi, approx = approx, invert = invert) -
+                 fima.ll.auto(pars = opt$pars - 2*eps,
+                              y = y, d.max = d.max,
+                              Covar = Covar, whi = whi, approx = approx, invert = invert))/(12*eps^2)
       stop <- TRUE
     } else {
       cat("Repeat\n")
@@ -1755,29 +1729,29 @@ comp.se <- function(opt, y, d.max, Covar = NULL, p = 0,
   s <- sqrt(-diff^(-1)/(length(y) - (d.max - 0.5) - p - q))
 
   if (is.na(s)) {
-  eps <- eps.start
-  stop <- FALSE; count <- 1;
-  while (!stop & count <= 100) {
-    if ((opt$pars + eps <= d.max) & (opt$pars - eps >= -1.5)) {
-      diff <- (fima.ll.auto(pars = opt$pars + eps,
-                               y = y, d.max = d.max,
-                               Covar = Covar, whi = whi, approx = approx, invert = invert) -
-                    2*fima.ll.auto(pars = opt$pars,
-                                   y = y, d.max = d.max,
-                                   Covar = Covar, whi = whi, approx = approx, invert = invert) +
-                    fima.ll.auto(pars = opt$pars - eps,
-                                 y = y, d.max = d.max,
-                                 Covar = Covar, whi = whi, approx = approx, invert = invert))/(eps^2)
-      stop <- TRUE
-    } else {
-      cat("Repeat\n")
-      count <- count + 1
-      eps <- .Machine$double.eps^(count/3)
+    eps <- eps.start
+    stop <- FALSE; count <- 1;
+    while (!stop & count <= 100) {
+      if ((opt$pars + eps <= d.max) & (opt$pars - eps >= -1.5)) {
+        diff <- (fima.ll.auto(pars = opt$pars + eps,
+                              y = y, d.max = d.max,
+                              Covar = Covar, whi = whi, approx = approx, invert = invert) -
+                   2*fima.ll.auto(pars = opt$pars,
+                                  y = y, d.max = d.max,
+                                  Covar = Covar, whi = whi, approx = approx, invert = invert) +
+                   fima.ll.auto(pars = opt$pars - eps,
+                                y = y, d.max = d.max,
+                                Covar = Covar, whi = whi, approx = approx, invert = invert))/(eps^2)
+        stop <- TRUE
+      } else {
+        cat("Repeat\n")
+        count <- count + 1
+        eps <- .Machine$double.eps^(count/3)
+      }
+
     }
 
-  }
-
-  s <-  sqrt(-diff[2]^(-1)/(length(y) - (d.max - 0.5) - p - q))
+    s <-  sqrt(-diff[2]^(-1)/(length(y) - (d.max - 0.5) - p - q))
   }
 
   return(s)
